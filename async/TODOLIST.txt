@@ -1,0 +1,17 @@
+
+#
+##
+
+	- init
+	- launch with callback "dowork" + "onfinish"
+	- cancel
+	- update
+
+
+	- consumer know his producer
+		-> consumer signal producer when finished working
+
+	- check if notified is really a "isAvailable" value
+
+##
+#
