@@ -4,6 +4,8 @@
 #include "IProducer.hpp"
 #include "ThreadSynchroniser.hpp"
 
+#include "utilities/NonCopyable.hpp"
+
 #include <functional>
 
 #include <thread>
@@ -11,6 +13,7 @@
 namespace multithreading
 {
     class Consumer
+        : public NonCopyable
     {
     private:
         std::thread _thread;
@@ -18,7 +21,7 @@ namespace multithreading
 
         bool _running = false;
 
-        workCallback _work;
+        WorkCallback _work;
 
         IProducer& _producer;
 
@@ -27,7 +30,7 @@ namespace multithreading
         ~Consumer();
 
     public:
-        void execute(const workCallback& work);
+        void execute(const WorkCallback& work);
         void quit();
 
     public:

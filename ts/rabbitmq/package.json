@@ -1,0 +1,21 @@
+{
+  "name": "rabbitmq",
+  "version": "1.0.0",
+  "description": "",
+  "main": "index.js",
+  "scripts": {
+    "build": "tsc",
+    "start": "node dist/main.js",
+    "test": "echo \"Error: no test specified\" && exit 1"
+  },
+  "author": "",
+  "license": "ISC",
+  "dependencies": {
+    "amqplib": "^0.7.1"
+  },
+  "devDependencies": {
+    "@types/amqplib": "^0.5.17",
+    "@types/node": "^15.0.2",
+    "typescript": "^4.0.5"
+  }
+}

@@ -9,6 +9,10 @@ namespace multithreading
     Consumer::Consumer(IProducer& producer)
         : _producer(producer)
     {
+        _running = false; // the consumer's thread will set it to true
+
+        // launch consumer thread
+
         _thread = std::thread(&Consumer::_threadedMethod, this);
 
         // here we wait for the thread to be running
@@ -24,11 +28,11 @@ namespace multithreading
     //
     //
 
-    void Consumer::execute(const workCallback& work)
+    void Consumer::execute(const WorkCallback& work)
     {
         auto lockNotifier = _waitProducer.makeScopedLockNotifier();
 
-        // this part is locked and will notify at then end of the scope
+        // this part is locked and will notify at the end of the scope
 
         _work = work;
     }
@@ -41,7 +45,7 @@ namespace multithreading
         {
             auto lockNotifier = _waitProducer.makeScopedLockNotifier();
 
-            // this part is locked and will notify at then end of the scope
+            // this part is locked and will notify at the end of the scope
 
             _running = false;
         }
@@ -68,11 +72,11 @@ namespace multithreading
 
     void Consumer::_threadedMethod()
     {
-        _running = true;
-
         auto lock = _waitProducer.makeScopedLock();
 
         // this part is locked
+
+        _running = true;
 
         while (_running)
         {

@@ -21,7 +21,9 @@ DIR_OBJ=	./obj/native
 
 SRC=	$(wildcard \
 			$(DIR_SRC)/*.cpp \
-			$(DIR_SRC)/multithreading/*.cpp)
+			$(DIR_SRC)/multithreading/*.cpp \
+			$(DIR_SRC)/multithreading/internals/*.cpp \
+			$(DIR_SRC)/utilities/*.cpp)
 
 #
 

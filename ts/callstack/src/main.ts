@@ -2,16 +2,16 @@
 const getStack = () => {
 
     // hacky replace
-    const orig = Error.prepareStackTrace;
-    Error.prepareStackTrace = (_, stack) => stack;
+    const orig = (Error as any).prepareStackTrace;
+    (Error as any).prepareStackTrace = (_, stack) => stack;
 
     // get stack
     const err = new Error();
-    Error.captureStackTrace(err, undefined);
+    (Error as any).captureStackTrace(err, undefined);
     const { stack } = err;
 
     // hacky reset
-    Error.prepareStackTrace = orig;
+    (Error as any).prepareStackTrace = orig;
 
     const actualStack = stack as unknown as NodeJS.CallSite[];
 
