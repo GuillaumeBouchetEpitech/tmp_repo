@@ -5,27 +5,36 @@
 
 #include <cstdlib> // EXIT_SUCCESS
 #include <iostream>
+#include <mutex>
 
 int main()
 {
     D_MYLOG("start");
 
     {
+        std::mutex loggerMutex;
+
         multithreading::Producer producer;
 
-        producer.initialise(1);
+        producer.initialise(3);
 
-        producer.push([]()
+        for (int ii = 0; ii < 20; ++ii)
         {
-            D_MYLOG("thread 1");
-        });
+            producer.push([ii, &loggerMutex]()
+            {
+                // thread safe logging
+                std::unique_lock<std::mutex> lock(loggerMutex);
 
-        producer.push([]()
+                D_MYLOG("task " << ii);
+            });
+        }
+
         {
-            D_MYLOG("thread 2");
-        });
+            // thread safe logging
+            std::unique_lock<std::mutex> lock(loggerMutex);
 
-        D_MYLOG("main waiting");
+            D_MYLOG("main waiting");
+        }
 
         producer.waitUntilAllCompleted();
 

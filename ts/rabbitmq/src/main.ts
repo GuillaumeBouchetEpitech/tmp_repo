@@ -27,6 +27,8 @@ const run = async () => {
         const channel = await connection.createChannel();
         await channel.assertQueue(queueName);
 
+        // max concurent message(s) being processed
+        // => must acknowledge message(s) before any new one(s) can be received
         channel.prefetch(2);
 
         channel.consume(queueName, async (msg) => {
@@ -34,7 +36,7 @@ const run = async () => {
             if (msg === null)
                 return;
 
-            await sleep(250);
+            await sleep(250); // for debug purpose
 
             console.log(msg.content.toString());
             channel.ack(msg);
@@ -49,7 +51,7 @@ const run = async () => {
 
         for (let ii = 0; ii < 5; ++ii) {
 
-            await sleep(500);
+            await sleep(500); // for debug purpose
 
             await channel.sendToQueue(queueName, Buffer.from(`message ${ii} 1`));
             await channel.sendToQueue(queueName, Buffer.from(`message ${ii} 2`));

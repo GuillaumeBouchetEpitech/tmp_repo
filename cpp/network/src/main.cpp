@@ -9,6 +9,8 @@
 #include <mutex>
 #include <chrono> // std::chrono::milliseconds
 #include <iostream>
+#include <sstream>
+
 
 #include <cstdlib> // EXIT_SUCCESS
 
@@ -173,7 +175,12 @@ void tryTcpSocket()
 
         for (int ii = 0; ii < 3; ++ii)
         {
-            std::string payload = "Hello World";
+            // std::string payload = "Hello World";
+
+            std::stringstream sstr;
+            sstr << "Hello World " << ii;
+
+            std::string payload = sstr.str();
 
             D_SAFE_LOG("[client] sending to server : " << payload);
 
