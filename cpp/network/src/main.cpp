@@ -175,8 +175,6 @@ void tryTcpSocket()
 
         for (int ii = 0; ii < 3; ++ii)
         {
-            // std::string payload = "Hello World";
-
             std::stringstream sstr;
             sstr << "Hello World " << ii;
 
@@ -280,6 +278,12 @@ void tryUdpSocket()
         //
         // CLIENT
 
+        struct UdpClient
+        {
+            network::UdpSocket clientSocket;
+            std::thread clientReadThread;
+        };
+
         network::UdpSocket clientSocket;
         clientSocket.create();
         // clientSocket.bind("127.0.0.1", 8888);
@@ -322,7 +326,10 @@ void tryUdpSocket()
 
         for (int ii = 0; ii < 3; ++ii)
         {
-            std::string payload = "Hello World";
+            std::stringstream sstr;
+            sstr << "Hello World " << ii;
+
+            std::string payload = sstr.str();
 
             D_SAFE_LOG("[client] sending to server : " << payload);
 

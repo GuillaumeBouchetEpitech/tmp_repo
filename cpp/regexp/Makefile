@@ -52,8 +52,8 @@ else
 endif
 
 
-# CXX=g++
-CXX=/usr/bin/g++-10
+CXX=g++
+# CXX=/usr/bin/g++-10
 AR=ar
 
 CXXFLAGS=	$(BUILD_FLAG) \

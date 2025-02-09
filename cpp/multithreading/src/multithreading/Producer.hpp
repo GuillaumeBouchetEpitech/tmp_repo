@@ -5,15 +5,19 @@
 #include "internals/Consumer.hpp"
 #include "internals/ThreadSynchroniser.hpp"
 
+#include "utilities/NonCopyable.hpp"
+
 #include <list>
 #include <functional>
 #include <memory>
 #include <thread>
 
+
 namespace multithreading
 {
     class Producer
         : public IProducer
+        , public NonCopyable
     {
     private:
         struct Task

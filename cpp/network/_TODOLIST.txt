@@ -6,3 +6,8 @@ https://stackoverflow.com/questions/36445190/c-send-udp-broadcast
 int trueflag = 1;
 if (setsockopt(fd, SOL_SOCKET, SO_BROADCAST, &trueflag, sizeof(trueflag)) < 0)
     throw std::runtime_error("failed to set the broadcast mode");
+
+
+
+test broadcast
+

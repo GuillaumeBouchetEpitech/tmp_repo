@@ -1,8 +1,6 @@
 
 #pragma once
 
-#include "utilities/NonCopyable.hpp"
-
 #include <functional>
 #include <memory>
 
@@ -13,7 +11,6 @@ namespace multithreading
     class Consumer;
 
     class IProducer
-        : public NonCopyable
     {
         // friendship so the consumers can call _notifyWorkDone()
         friend Consumer;
