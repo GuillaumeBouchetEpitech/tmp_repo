@@ -1,0 +1,24 @@
+{
+  "name": "bm25",
+  "version": "1.0.0",
+  "description": "",
+  "main": "index.js",
+  "scripts": {
+    "test": "echo \"Error: no test specified\" && exit 1"
+  },
+  "keywords": [],
+  "author": "",
+  "license": "ISC",
+  "type": "commonjs",
+  "dependencies": {
+    "natural": "^8.1.0",
+    "node-lefff": "^0.3.1",
+    "wink-bm25-text-search": "^3.1.2"
+  },
+  "devDependencies": {
+    "@types/node": "^24.10.1",
+    "@types/turndown": "^5.0.6",
+    "tsx": "^4.20.6",
+    "turndown": "^7.2.2"
+  }
+}
