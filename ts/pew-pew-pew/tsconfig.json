@@ -1,0 +1,19 @@
+{
+    "compilerOptions": {
+        "lib": ["es2019", "dom"],
+        "noImplicitAny": true,
+        "target": "es6",
+        "module": "es6",
+        "baseUrl": "./",
+        "rootDir": ".",
+        "strict": true,
+        "moduleResolution": "node",
+        "paths": {
+            "@browser": ["./src/browser"],
+            "@browser/webgl2": ["./src/browser/webgl2"],
+        }
+    },
+    "include": [
+        "./src/**/*.ts",
+    ]
+}

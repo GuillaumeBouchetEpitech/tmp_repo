@@ -1,0 +1,15 @@
+{
+    "compilerOptions": {
+        "noImplicitAny": true,
+        "target": "es6",
+        "module": "es6",
+        "baseUrl": "./",
+        "rootDir": ".",
+        "strict": true,
+        "skipLibCheck": true,
+        "moduleResolution": "node",
+        "paths": {
+            "@local-framework": ["./local-framework/index.ts"]
+        }
+    }
+}
