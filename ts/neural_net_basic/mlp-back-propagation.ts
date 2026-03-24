@@ -3,7 +3,7 @@
 
 
 
-
+// MARK: activations
 const _clampValue = (val: number, minVal: number, maxVal: number) =>
   Math.min(Math.max(val, minVal), maxVal);
 
@@ -60,8 +60,8 @@ const activations: Record<'tanh' | 'sigmoid' | 'relu' | 'leakyRelu', IActivation
   },
   relu: {
     activation: (x: number) => {
-      // return Math.max(0, x); // [0..x] -> unsafe?
-      return _clampValue(x, 0, 1); // [0..1]
+      // return Math.max(0, x); // [0..x] -> exploding gradient, unsafe?
+      return _clampValue(x, 0, 1); // [0..1] -> this avoid exploding gradient
     },
     derivative: (x: number) => {
       return x < 0 ? 0 : 1;
@@ -70,8 +70,8 @@ const activations: Record<'tanh' | 'sigmoid' | 'relu' | 'leakyRelu', IActivation
       if (isBias) {
         return 0.01;
       }
-      return ((currN+1) / nInput) * 0.1
-      // return ((currN+1) / nOutput) * 0.01
+      return ((currN+1) / nInput) * 0.1;
+      // return ((currN+1) / nOutput) * 0.01;
 
       //  U[-√(6/(n_in + n_out)), √(6/(n_in + n_out))]
       // return ((currN+1) / nOutput) * Math.sqrt(3/(nInput+nOutput)) - Math.sqrt(6/(nInput+nOutput))
@@ -84,10 +84,11 @@ const activations: Record<'tanh' | 'sigmoid' | 'relu' | 'leakyRelu', IActivation
     activation: (x: number) => {
       // [-0.1x..x]
       if (x < 0) {
-        return x * 0.1;
+        // return x * 0.1; // [-0.1x..0] -> exploding gradient, unsafe?
+        return _clampValue(x * 0.1, -1, 0); // [-1..0] -> this avoid exploding gradient
       }
-      // return x; // [-0.1x..x]  -> unsafe?
-      return _clampValue(x, 0, 1); // [-0.1x..x] -> [-0.1x..1]
+      // return x; // [-0.1x..x] -> exploding gradient, unsafe?
+      return _clampValue(x, 0, 1); // [-0.1x..1] -> this avoid exploding gradient
     },
     derivative: (x: number) => {
       return x < 0 ? -0.1 : 1;
@@ -96,6 +97,7 @@ const activations: Record<'tanh' | 'sigmoid' | 'relu' | 'leakyRelu', IActivation
       if (isBias) {
         return 0.1;
       }
+      // return ((currN+1) / nInput) * 0.1;
       return ((currN+1) / nOutput) * 0.01;
 
       //  U[-√(6/(n_in + n_out)), √(6/(n_in + n_out))]
@@ -122,6 +124,7 @@ const currActivation: IActivationFunc = activations['leakyRelu'] // YES AND SUPE
 
 
 
+// MARK: Neuron
 interface Synapse {
   input: Neuron;
   output: Neuron;
@@ -219,6 +222,7 @@ class Neuron {
 
 
 
+// MARK: NeuralNetwork
 const k_minSamples = 100;
 
 
@@ -433,6 +437,7 @@ class NeuralNetwork {
 
 
 
+// MARK: Training
 const showVector = (vector: number[]): string => {
   return `[${vector.map(value => value.toFixed(3)).join(', ')}]`;
 };
@@ -540,6 +545,7 @@ const allTrainingPhases: ITrainingPhase[] = [
 ];
 
 
+// MARK: training loop
 allTrainingPhases.forEach((currTrainingPhase) => {
 
   console.log();
@@ -548,14 +554,13 @@ allTrainingPhases.forEach((currTrainingPhase) => {
 
   const neuralNetwork = new NeuralNetwork(currTrainingPhase.networkDef);
 
-  const maxPasses = 200000;
+  const maxPasses = 10*1000*1000;
   let trainingPass = 0;
 
   while (trainingPass < maxPasses) {
 
-    // const percent = _clampValue(trainingPass / maxPasses, 0, 1);
-
     // decrease learning rate over time
+    // const percent = _clampValue(trainingPass / maxPasses, 0, 1);
     // const learningRate = 0.25 - 0.15 * _clampValue(percent * 1, 0, 1);
     // const learningRate = 1.0;
     const learningRate = 0.25;
@@ -636,6 +641,7 @@ allTrainingPhases.forEach((currTrainingPhase) => {
 
 });
 
+// MARK: results loop
 for (let ii = 0; ii < 10; ++ii) {
   console.log(`###############################################################################`);
 }
