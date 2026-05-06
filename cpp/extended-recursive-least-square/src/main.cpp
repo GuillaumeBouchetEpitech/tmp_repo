@@ -1,0 +1,186 @@
+
+#include "NeuralNetwork.hpp"
+#include "ExtenderRecursiveLeastSquareTrainer.hpp"
+
+#include <sstream>
+#include <iostream>
+#include <iomanip>
+#include <cstdio> // <= EXIT_SUCCESS
+#include <cmath> // <= std::round
+
+void _runTest(const std::vector<TrainingSample>& inDataset, const NeuralNetworkTopology& inTopology)
+{
+
+  // NeuralNetworkTopology topology = NeuralNetworkTopology({2, 4, 1});
+  auto neuralNetwork = std::make_shared<NeuralNetwork>(inTopology);
+
+  ExtenderRecursiveLeastSquareTrainerDef def;
+  def.network = neuralNetwork;
+  def.lambda = 0.99f;
+  def.windowSize = 100;
+
+  ExtenderRecursiveLeastSquareTrainer trainer = ExtenderRecursiveLeastSquareTrainer(def);
+
+  constexpr int32_t maxEpochs = 1000;
+  int32_t epochs = 0;
+  for (; epochs < maxEpochs; ++epochs) {
+    trainer.trainEpoch(inDataset);
+
+    // for (auto& currSample : inDataset)
+    // {
+    //   std::vector<float> tmpOutputs;
+    //   neuralNetwork->forward(currSample.inputs, tmpOutputs);
+
+    //   std::stringstream sstr;
+    //   sstr << "[";
+    //   for (auto currVal : currSample.inputs) {
+    //     sstr << currVal << ",";
+    //   }
+    //   sstr << "] => [";
+    //   for (auto currVal : currSample.targets) {
+    //     sstr << currVal << ",";
+    //   }
+    //   sstr << "] ----> [";
+    //   for (auto currVal : tmpOutputs) {
+    //     sstr << std::round(currVal) << ",";
+    //   }
+    //   sstr << "] (";
+    //   for (auto currVal : tmpOutputs) {
+    //     sstr << std::fixed << currVal << ",";
+    //   }
+    //   sstr << ")";
+
+    //   std::cout << sstr.str() << std::endl;
+    // }
+
+    if (trainer.isConverged(1e-3)) {
+      break;
+    }
+  }
+
+  std::cout << "epochs -> " << epochs << " / " << maxEpochs << std::endl;
+  std::cout << "trainer.averageError() -> " << trainer.averageError() << std::endl;
+
+  for (auto& currSample : inDataset)
+  {
+    std::vector<float> tmpOutputs;
+    neuralNetwork->forward(currSample.inputs, tmpOutputs);
+
+    std::stringstream sstr;
+    sstr << "[";
+    for (auto currVal : currSample.inputs) {
+      sstr << currVal << ",";
+    }
+    sstr << "] => [";
+    for (auto currVal : currSample.targets) {
+      sstr << currVal << ",";
+    }
+    sstr << "] ----> [";
+    for (auto currVal : tmpOutputs) {
+      sstr << std::round(currVal) << ",";
+    }
+    sstr << "] (";
+    for (auto currVal : tmpOutputs) {
+      sstr << std::fixed << currVal << ",";
+    }
+    sstr << ")";
+
+    std::cout << sstr.str() << std::endl;
+  }
+
+}
+
+int main()
+{
+  std::cout << "[START]" << std::endl;
+
+  {
+    std::cout << " ===========================================" << std::endl;
+    std::cout << " == YES ==" << std::endl;
+    std::cout << " ==" << std::endl;
+    std::vector<TrainingSample> tmpDataset;
+    tmpDataset.reserve(2);
+    tmpDataset.push_back({ {0}, {0} });
+    tmpDataset.push_back({ {1}, {1} });
+    _runTest(tmpDataset, NeuralNetworkTopology({1, 4, 1}));
+  }
+
+  {
+    std::cout << " ===========================================" << std::endl;
+    std::cout << " == NO ==" << std::endl;
+    std::cout << " ==" << std::endl;
+    std::vector<TrainingSample> tmpDataset;
+    tmpDataset.reserve(2);
+    tmpDataset.push_back({ {0}, {1} });
+    tmpDataset.push_back({ {1}, {0} });
+    _runTest(tmpDataset, NeuralNetworkTopology({1, 4, 1}));
+  }
+
+  {
+    std::cout << " ===========================================" << std::endl;
+    std::cout << " == AND ==" << std::endl;
+    std::cout << " ==" << std::endl;
+    std::vector<TrainingSample> tmpDataset;
+    tmpDataset.reserve(4);
+    tmpDataset.push_back({ {0,0}, {0} });
+    tmpDataset.push_back({ {1,0}, {0} });
+    tmpDataset.push_back({ {0,1}, {0} });
+    tmpDataset.push_back({ {1,1}, {1} });
+    _runTest(tmpDataset, NeuralNetworkTopology({2, 4, 1}));
+  }
+
+  {
+    std::cout << " ===========================================" << std::endl;
+    std::cout << " == OR ==" << std::endl;
+    std::cout << " ==" << std::endl;
+    std::vector<TrainingSample> tmpDataset;
+    tmpDataset.reserve(4);
+    tmpDataset.push_back({ {0,0}, {0} });
+    tmpDataset.push_back({ {1,0}, {1} });
+    tmpDataset.push_back({ {0,1}, {1} });
+    tmpDataset.push_back({ {1,1}, {1} });
+    _runTest(tmpDataset, NeuralNetworkTopology({2, 4, 1}));
+  }
+
+  {
+    std::cout << " ===========================================" << std::endl;
+    std::cout << " == NOR ==" << std::endl;
+    std::cout << " ==" << std::endl;
+    std::vector<TrainingSample> tmpDataset;
+    tmpDataset.reserve(4);
+    tmpDataset.push_back({ {0,0}, {1} });
+    tmpDataset.push_back({ {1,0}, {0} });
+    tmpDataset.push_back({ {0,1}, {0} });
+    tmpDataset.push_back({ {1,1}, {0} });
+    _runTest(tmpDataset, NeuralNetworkTopology({2, 4, 1}));
+  }
+
+  {
+    std::cout << " ===========================================" << std::endl;
+    std::cout << " == XOR ==" << std::endl;
+    std::cout << " ==" << std::endl;
+    std::vector<TrainingSample> tmpDataset;
+    tmpDataset.reserve(4);
+    tmpDataset.push_back({ {0,0}, {0} });
+    tmpDataset.push_back({ {1,0}, {1} });
+    tmpDataset.push_back({ {0,1}, {1} });
+    tmpDataset.push_back({ {1,1}, {0} });
+    _runTest(tmpDataset, NeuralNetworkTopology({2, 4, 1}));
+  }
+
+  {
+    std::cout << " ===========================================" << std::endl;
+    std::cout << " == XNOR ==" << std::endl;
+    std::cout << " ==" << std::endl;
+    std::vector<TrainingSample> tmpDataset;
+    tmpDataset.reserve(4);
+    tmpDataset.push_back({ {0,0}, {1} });
+    tmpDataset.push_back({ {1,0}, {0} });
+    tmpDataset.push_back({ {0,1}, {0} });
+    tmpDataset.push_back({ {1,1}, {1} });
+    _runTest(tmpDataset, NeuralNetworkTopology({2, 4, 1}));
+  }
+
+  std::cout << "[END]" << std::endl;
+  return EXIT_SUCCESS;
+}
