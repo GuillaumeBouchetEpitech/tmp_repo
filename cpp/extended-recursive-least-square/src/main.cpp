@@ -2,6 +2,8 @@
 #include "NeuralNetwork.hpp"
 #include "ExtenderRecursiveLeastSquareTrainer.hpp"
 
+#include "Clock.hpp"
+
 #include <sstream>
 #include <iostream>
 #include <iomanip>
@@ -20,6 +22,9 @@ void _runTest(const std::vector<TrainingSample>& inDataset, const NeuralNetworkT
   def.windowSize = 100;
 
   ExtenderRecursiveLeastSquareTrainer trainer = ExtenderRecursiveLeastSquareTrainer(def);
+
+  Clock tmpClock;
+  tmpClock.start();
 
   constexpr int32_t maxEpochs = 1000;
   int32_t epochs = 0;
@@ -58,8 +63,22 @@ void _runTest(const std::vector<TrainingSample>& inDataset, const NeuralNetworkT
     }
   }
 
+  tmpClock.stop();
+
+  if (epochs < maxEpochs) {
+    std::cout << "*------*" << std::endl;
+    std::cout << "* PASS *" << std::endl;
+    std::cout << "*------*" << std::endl;
+  } else {
+    std::cout << "########" << std::endl;
+    std::cout << "# FAIL #" << std::endl;
+    std::cout << "########" << std::endl;
+  }
+
   std::cout << "epochs -> " << epochs << " / " << maxEpochs << std::endl;
   std::cout << "trainer.averageError() -> " << trainer.averageError() << std::endl;
+  std::cout << "tmpClock.getDuration() -> " << tmpClock.getDuration() << "ns" << std::endl;
+  std::cout << "tmpClock.getDuration() -> " << float(tmpClock.getDuration()) / 1000000.0f << "ms" << std::endl;
 
   for (auto& currSample : inDataset)
   {

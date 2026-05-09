@@ -2,6 +2,7 @@
 #include "NeuralNetwork.hpp"
 
 #include "RandomNumberGenerator.hpp"
+#include "clamp.hpp"
 
 #include <stdexcept>
 #include <cmath>
@@ -27,6 +28,8 @@ float
 _vanillaSigmoid(float x) {
   return 1.0f / (1.0f + std::exp(-x));
 }
+
+constexpr float k_weightRange = 1000.0f;
 
 };
 
@@ -81,6 +84,18 @@ NeuralNetworkNeuron::NeuralNetworkNeuron(std::size_t numInputs)
   }
 
   this->_biasSynapseWeight = RandomNumberGenerator::getRangedValue(-0.5f, 0.5f);
+}
+
+void NeuralNetworkNeuron::updateInputSynapseWeights(std::size_t ii, float value) const
+{
+  this->_inputSynapseWeights.at(ii) += value;
+  this->_inputSynapseWeights.at(ii) = clamp(this->_inputSynapseWeights.at(ii), -k_weightRange, k_weightRange);
+}
+
+void NeuralNetworkNeuron::updateBiasSynapseWeight(float value) const
+{
+  this->_biasSynapseWeight += value;
+  this->_biasSynapseWeight = clamp(this->_biasSynapseWeight, -k_weightRange, k_weightRange);
 }
 
 

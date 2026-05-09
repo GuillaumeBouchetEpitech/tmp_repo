@@ -5,6 +5,8 @@ project(exec)
 # Our Project
 set(SOURCE_FILES
   ./src/main.cpp
+  ./src/clamp.cpp
+  ./src/Clock.cpp
   ./src/RandomNumberGenerator.cpp
   ./src/NeuralNetwork.cpp
   ./src/ExtenderRecursiveLeastSquareTrainer.cpp

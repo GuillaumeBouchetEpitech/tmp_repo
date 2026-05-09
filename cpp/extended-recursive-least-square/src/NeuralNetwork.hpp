@@ -35,8 +35,8 @@ public:
   void setLastOutput(float value) const { this->_lastOutput = value; }
 
 public:
-  void updateInputSynapseWeights(std::size_t ii, float value) const { this->_inputSynapseWeights.at(ii) += value; }
-  void updateBiasSynapseWeight(float value) const { this->_biasSynapseWeight += value; }
+  void updateInputSynapseWeights(std::size_t ii, float value) const;
+  void updateBiasSynapseWeight(float value) const;
 
 public:
   const std::vector<float>& getInputSynapseWeights() const { return this->_inputSynapseWeights; }
