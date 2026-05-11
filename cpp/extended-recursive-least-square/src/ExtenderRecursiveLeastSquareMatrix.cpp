@@ -11,6 +11,7 @@
 namespace /*anonymous*/ {
 
 constexpr float k_matrixCellValueRange = 1000.0f * 1000.0f;
+// constexpr float k_matrixCellValueRange = 10.0f;
 
 };
 
@@ -29,6 +30,8 @@ ExtenderRecursiveLeastSquareMatrix::ExtenderRecursiveLeastSquareMatrix(std::size
   // for (std::size_t ii = 0; ii < inSize; ++ii) {
   //   this->_buffer.at(ii * inSize + ii) = inScale;
   // }
+
+  inScale = std::min(inScale, k_matrixCellValueRange);
 
   // identity matrix
   for (std::size_t yy = 0; yy < inSize; ++yy)

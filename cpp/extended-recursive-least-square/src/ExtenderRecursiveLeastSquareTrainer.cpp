@@ -21,7 +21,7 @@ ExtenderRecursiveLeastSquareTrainer::ExtenderRecursiveLeastSquareTrainer(const E
   constexpr float k_scale = 100.0f;
   const auto& topology = this->_def.network->getTopology();
   const uint32_t totalWeights = topology.getTotalWeights();
-  const uint32_t totalOutputs = topology.getRawValues().back();
+  const uint32_t totalOutputs = topology.getRawValues().back().numNeurons;
   this->_perOutputMatrixP.reserve(std::size_t(totalOutputs));
   for (uint32_t ii = 0; ii < totalOutputs; ++ii) {
     this->_perOutputMatrixP.emplace_back(totalWeights, k_scale);
@@ -33,10 +33,10 @@ ExtenderRecursiveLeastSquareTrainer::ExtenderRecursiveLeastSquareTrainer(const E
 float ExtenderRecursiveLeastSquareTrainer::trainSample(const TrainingSample& inSample)
 {
   const auto& topology = this->_def.network->getTopology();
-  if (topology.getRawValues().front() != inSample.inputs.size()) {
+  if (topology.getRawValues().front().numNeurons != inSample.inputs.size()) {
     throw std::invalid_argument("invalid sample inputs length");
   }
-  if (topology.getRawValues().back() != inSample.targets.size()) {
+  if (topology.getRawValues().back().numNeurons != inSample.targets.size()) {
     throw std::invalid_argument("invalid sample outputs length");
   }
 
@@ -50,8 +50,8 @@ float ExtenderRecursiveLeastSquareTrainer::trainSample(const TrainingSample& inS
   allNeuronsOutputs.push_back({ inSample.inputs }); // TODO: hard copy
   for (const auto& currLayer : this->_def.network->getLayers()) {
     std::vector<float> allOutputs;
-    allOutputs.reserve(currLayer.neurons.size());
-    for (auto& currNeuron : currLayer.neurons) {
+    allOutputs.reserve(currLayer.inputNeurons.size());
+    for (auto& currNeuron : currLayer.inputNeurons) {
       allOutputs.push_back(currNeuron.getLastOutput());
     }
     allNeuronsOutputs.push_back({ allOutputs }); // TODO: hard copy
@@ -79,14 +79,25 @@ float ExtenderRecursiveLeastSquareTrainer::trainSample(const TrainingSample& inS
     allLayersDeltas.resize(numLayers);
 
     // Output layer: only neuron [currTargetIndex] has a non-zero delta; all others are 0.
-    allLayersDeltas.back().neuronsDeltas.resize(this->_def.network->getLayers().back().neurons.size(), 0.0f);
-    allLayersDeltas.back().neuronsDeltas.at(currTargetIndex) = currOutput * (1.0f - currOutput);
+    allLayersDeltas.back().neuronsDeltas.resize(this->_def.network->getLayers().back().inputNeurons.size(), 0.0f);
+    // allLayersDeltas.back().neuronsDeltas.at(currTargetIndex) = AllActivations::sigmoid::derive(currOutput);
+    // allLayersDeltas.back().neuronsDeltas.at(currTargetIndex) = AllActivations::ReLU::derive(currOutput);
+    // allLayersDeltas.back().neuronsDeltas.at(currTargetIndex) = AllActivations::leakyReLU::derive(currOutput);
+
+    {
+      auto outputActivationType = this->_def.network->getTopology().getRawValues().back().activation;
+      const auto& currActivations = AllActivations::fromEnum(outputActivationType);
+      allLayersDeltas.back().neuronsDeltas.at(currTargetIndex) = currActivations.derive(currOutput);
+    }
 
     // Propagate deltas backward through hidden layers
     for (int32_t layerIndex = int32_t(numLayers) - 2; layerIndex >= 0; --layerIndex) {
       const auto& nextNetworkLayer = this->_def.network->getLayers().at(layerIndex + 1);
       const auto& nextLayerDeltas = allLayersDeltas.at(layerIndex + 1).neuronsDeltas;
       const auto& nextLayerOutputs = allNeuronsOutputs.at(layerIndex + 1);
+
+      auto hiddenActivationType = this->_def.network->getTopology().getRawValues().back().activation;
+      const auto& currActivations = AllActivations::fromEnum(hiddenActivationType);
 
       // delta[layerIndex][inputNeuronIndex] = sigmoid'(y_n) * sum_j( w[layerIndex+1][j][inputNeuronIndex] * delta[layerIndex+1][j] )
 
@@ -96,9 +107,13 @@ float ExtenderRecursiveLeastSquareTrainer::trainSample(const TrainingSample& inS
         const float outputVal = nextLayerOutputs.neuronsOutputs.at(inputNeuronIndex);
         float weightSum = 0.0f;
         for (std::size_t outputNeuronIndex = 0; outputNeuronIndex < nextLayerDeltas.size(); ++outputNeuronIndex) {
-          weightSum += nextNetworkLayer.neurons.at(outputNeuronIndex).getInputSynapseWeights().at(inputNeuronIndex) * nextLayerDeltas.at(outputNeuronIndex);
+          weightSum += nextNetworkLayer.inputNeurons.at(outputNeuronIndex).getInputSynapseWeights().at(inputNeuronIndex) * nextLayerDeltas.at(outputNeuronIndex);
         }
-        currLayerDeltas.push_back(outputVal * (1.0f - outputVal) * weightSum);
+
+        // currLayerDeltas.push_back(AllActivations::sigmoid::derive(outputVal) * weightSum);
+        // currLayerDeltas.push_back(AllActivations::ReLU::derive(outputVal) * weightSum);
+        // currLayerDeltas.push_back(AllActivations::leakyReLU::derive(outputVal) * weightSum);
+        currLayerDeltas.push_back(currActivations.derive(outputVal) * weightSum);
       }
       allLayersDeltas.at(layerIndex).neuronsDeltas = currLayerDeltas;
     }
@@ -117,9 +132,9 @@ float ExtenderRecursiveLeastSquareTrainer::trainSample(const TrainingSample& inS
     for (std::size_t layerIndex = 0; layerIndex < numLayers; ++layerIndex) {
       const auto& currLayer = this->_def.network->getLayers().at(layerIndex);
       const auto& layerInputs = allNeuronsOutputs.at(layerIndex);
-      for (std::size_t currNeuronIndex = 0; currNeuronIndex < currLayer.neurons.size(); ++currNeuronIndex) {
+      for (std::size_t currNeuronIndex = 0; currNeuronIndex < currLayer.inputNeurons.size(); ++currNeuronIndex) {
         const float currNeuronDelta = allLayersDeltas.at(layerIndex).neuronsDeltas.at(currNeuronIndex);
-        for (std::size_t inputNeuronIndex = 0; inputNeuronIndex < currLayer.neurons.at(currNeuronIndex).getInputSynapseWeights().size(); ++inputNeuronIndex) {
+        for (std::size_t inputNeuronIndex = 0; inputNeuronIndex < currLayer.inputNeurons.at(currNeuronIndex).getInputSynapseWeights().size(); ++inputNeuronIndex) {
           // input connection gradient
           phi.push_back(currNeuronDelta * layerInputs.neuronsOutputs.at(inputNeuronIndex));
         }
@@ -165,7 +180,7 @@ float ExtenderRecursiveLeastSquareTrainer::trainSample(const TrainingSample& inS
     // -> which is why ordering mattered so much until now
     std::size_t idx = 0;
     for (const auto& layer :  this->_def.network->getLayers()) {
-      for (const auto& currNeuron : layer.neurons) {
+      for (const auto& currNeuron : layer.inputNeurons) {
         for (std::size_t inputNeuronIndex = 0; inputNeuronIndex < currNeuron.getInputSynapseWeights().size(); inputNeuronIndex++) {
           // input weight update
           currNeuron.updateInputSynapseWeights(inputNeuronIndex, K.at(idx++) * errorVal);
@@ -194,6 +209,10 @@ float ExtenderRecursiveLeastSquareTrainer::trainSample(const TrainingSample& inS
 // The MSE is appended to the rolling error window used by isConverged().
 float ExtenderRecursiveLeastSquareTrainer::trainEpoch(const std::vector<TrainingSample>& inDataset)
 {
+  if (inDataset.empty()) {
+    return 0.0f;
+  }
+
   float allEpochsMSE = 0.0f;
   for (const auto& currSample : inDataset) {
     allEpochsMSE += this->trainSample(currSample);

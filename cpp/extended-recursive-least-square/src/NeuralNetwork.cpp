@@ -3,6 +3,7 @@
 
 #include "RandomNumberGenerator.hpp"
 #include "clamp.hpp"
+#include "asValue.hpp"
 
 #include <stdexcept>
 #include <cmath>
@@ -29,51 +30,185 @@ _vanillaSigmoid(float x) {
   return 1.0f / (1.0f + std::exp(-x));
 }
 
-constexpr float k_weightRange = 1000.0f;
+float
+_restrictedRELU(float x) {
+  return clamp(x, 0.0f, 1.0f);
+}
+
+float
+_restrictedleakyReLU(float x) {
+  float output = x;
+  if (output < 0.0f) {
+    output *= 0.1f;
+  }
+  return clamp(output, -10.0f, 10.0f);
+}
+
+// constexpr float k_weightRange = 1000.0f;
+constexpr float k_weightRange = 100.0f;
 
 };
 
-//MARK:NeuralNetworkTopology
-NeuralNetworkTopology::NeuralNetworkTopology(const std::initializer_list<int32_t>& inList)
-{
-  if (inList.size() < 2) {
-    throw std::invalid_argument("invalid topology length for NeuralNetwork");
-  }
-  for (int32_t currSize : inList) {
-    if (currSize < 1) {
-      throw std::invalid_argument("invalid topology layer size for NeuralNetwork");
+//MARK:AllActivations
+namespace AllActivations {
+
+  namespace sigmoid {
+    float activate(float x) {
+    return 1.0f / (1.0f + std::exp(-x));
     }
+    float derive(float x) {
+      return x * (1.0f - x);
+    }
+  };
+
+  namespace ReLU {
+    float activate(float x) {
+      return std::max(x, 0.0f);
+    }
+    float derive(float x) {
+      return (x < 0.0f) ? 0.0f : 1.0f;
+    }
+  };
+
+  namespace leakyReLU {
+    float activate(float x) {
+      return (x < 0.0f) ? 0.1f * x : x;
+    }
+    float derive(float x) {
+      return (x < 0.0f) ? 0.1f : 1.0f;
+    }
+  };
+
+  static std::array<ActivationType, 3> s_asArray = {{
+    { &sigmoid::activate, &sigmoid::derive },
+    { &ReLU::activate, &ReLU::derive },
+    { &leakyReLU::activate, &leakyReLU::derive }
+  }};
+
+  const ActivationType& fromEnum(NeuralNetworkActivations type)
+  {
+    return s_asArray.at(asValue(type));
   }
 
-  _rawValues.reserve(inList.size());
-  for (auto currSize : inList) {
-    _rawValues.push_back(uint32_t(currSize));
+};
+
+
+//MARK:NeuralNetworkTopology
+// NeuralNetworkTopology::NeuralNetworkTopology(const std::initializer_list<int32_t>& inList)
+// {
+//   if (inList.size() < 2) {
+//     throw std::invalid_argument("invalid topology length for NeuralNetwork");
+//   }
+//   for (int32_t currSize : inList) {
+//     if (currSize < 1) {
+//       throw std::invalid_argument("invalid topology layer size for NeuralNetwork");
+//     }
+//   }
+
+//   _rawValues.reserve(inList.size());
+//   for (auto currSize : inList) {
+//     _rawValues.push_back(uint32_t(currSize));
+//   }
+
+//   {
+//     // compute total weights
+//     // uint32_t prev_layer_num_neuron = 0;
+//     for (std::size_t ii = 1; ii < _rawValues.size(); ++ii) {
+//       const uint32_t numInputs = _rawValues.at(ii - 1);
+//       const uint32_t numNeuron = _rawValues.at(ii);
+//       // input synapse weights
+//       // _totalWeights += prev_layer_numNeuron * numNeuron;
+//       _totalWeights += numNeuron * numInputs;
+//       // bias synapse weights
+//       _totalWeights += numNeuron;
+//       //
+//       // prev_layer_numNeuron = numNeuron;
+//     }
+//   }
+
+//   // {
+//   //   // compute total neurons
+//   //   for (std::size_t ii = 0; ii < _rawValues.size(); ++ii) {
+//   //     const uint32_t num_neuron = _rawValues.at(ii);
+//   //     _totalNeurons += num_neuron;
+//   //   }
+//   // }
+// }
+
+NeuralNetworkTopologyBuilder& NeuralNetworkTopologyBuilder::clear()
+{
+  this->_topology._rawValues.clear();
+  this->_topology._totalWeights = 0;
+  return *this;
+}
+
+NeuralNetworkTopologyBuilder& NeuralNetworkTopologyBuilder::addInputLayer(uint32_t numNeurons)
+{
+  if (this->_topology._rawValues.empty() == false) {
+    throw std::invalid_argument("input layer must be added first in a neural network topology");
+  }
+  if (numNeurons == 0) {
+    throw std::invalid_argument("total neurons cannot be 0 for layers in a neural network topology");
+  }
+  this->_topology._rawValues.push_back({ NeuralNetworkLayerDef::AllTypes::input, numNeurons });
+  return *this;
+}
+
+NeuralNetworkTopologyBuilder& NeuralNetworkTopologyBuilder::addHiddenLayer(uint32_t numNeurons, NeuralNetworkActivations activation /*= NeuralNetworkActivations::sigmoid*/)
+{
+  if (this->_topology._rawValues.empty() == true) {
+    throw std::invalid_argument("hidden layer must be added after an input layer in a neural network topology");
+  }
+  if (this->_topology._rawValues.back().type == NeuralNetworkLayerDef::AllTypes::output) {
+    throw std::invalid_argument("hidden layer cannot be added after an output layer in a neural network topology");
+  }
+  if (numNeurons == 0) {
+    throw std::invalid_argument("total neurons cannot be 0 for layers in a neural network topology");
+  }
+  this->_topology._rawValues.push_back({ NeuralNetworkLayerDef::AllTypes::input, numNeurons, activation });
+  return *this;
+}
+
+NeuralNetworkTopologyBuilder& NeuralNetworkTopologyBuilder::addOutputLayer(uint32_t numNeurons, NeuralNetworkActivations activation /*= NeuralNetworkActivations::sigmoid*/)
+{
+  if (this->_topology._rawValues.empty() == true) {
+    throw std::invalid_argument("output layer must be added after an input layer in a neural network topology");
+  }
+  if (this->_topology._rawValues.back().type == NeuralNetworkLayerDef::AllTypes::output) {
+    throw std::invalid_argument("must only add one output layer in a neural network topology");
+  }
+  if (numNeurons == 0) {
+    throw std::invalid_argument("total neurons cannot be 0 for layers in a neural network topology");
+  }
+  this->_topology._rawValues.push_back({ NeuralNetworkLayerDef::AllTypes::input, numNeurons, activation });
+  return *this;
+}
+
+NeuralNetworkTopology NeuralNetworkTopologyBuilder::build()
+{
+  if (this->_topology._rawValues.size() < 2) {
+    throw std::invalid_argument("must have at least 2 layers in a neural network topology");
   }
 
   {
     // compute total weights
     // uint32_t prev_layer_num_neuron = 0;
-    for (std::size_t ii = 1; ii < _rawValues.size(); ++ii) {
-      const uint32_t numInputs = _rawValues.at(ii - 1);
-      const uint32_t numNeuron = _rawValues.at(ii);
+    for (std::size_t ii = 1; ii < this->_topology._rawValues.size(); ++ii) {
+      const uint32_t numInputs = this->_topology._rawValues.at(ii - 1).numNeurons;
+      const uint32_t numNeuron = this->_topology._rawValues.at(ii).numNeurons;
       // input synapse weights
       // _totalWeights += prev_layer_numNeuron * numNeuron;
-      _totalWeights += numNeuron * numInputs;
+      this->_topology._totalWeights += numNeuron * numInputs;
       // bias synapse weights
-      _totalWeights += numNeuron;
+      this->_topology._totalWeights += numNeuron;
       //
       // prev_layer_numNeuron = numNeuron;
     }
   }
 
-  // {
-  //   // compute total neurons
-  //   for (std::size_t ii = 0; ii < _rawValues.size(); ++ii) {
-  //     const uint32_t num_neuron = _rawValues.at(ii);
-  //     _totalNeurons += num_neuron;
-  //   }
-  // }
+  return this->_topology; // TODO: hard copy (reallocation)
 }
+
 
 //MARK:NeuralNetworkNeuron
 NeuralNetworkNeuron::NeuralNetworkNeuron(std::size_t numInputs)
@@ -107,13 +242,13 @@ NeuralNetwork::NeuralNetwork(const NeuralNetworkTopology& topology)
 
   this->_layers.reserve(topology.getRawValues().size() - 1);
   for (std::size_t layerIndex = 1; layerIndex < topology.getRawValues().size(); ++layerIndex) {
-    const uint32_t numInputs = this->_topology.getRawValues().at(layerIndex - 1);
-    const uint32_t numNeurons = this->_topology.getRawValues().at(layerIndex);
+    const uint32_t numInputs = this->_topology.getRawValues().at(layerIndex - 1).numNeurons;
+    const uint32_t numNeurons = this->_topology.getRawValues().at(layerIndex).numNeurons;
 
     NeuralNetworkLayer newLayer;
-    newLayer.neurons.reserve(numNeurons);
+    newLayer.inputNeurons.reserve(numNeurons);
     for (uint32_t neuronIndex = 0; neuronIndex < numNeurons; ++neuronIndex) {
-      newLayer.neurons.emplace_back(numInputs);
+      newLayer.inputNeurons.emplace_back(numInputs);
     }
 
     this->_layers.push_back(std::move(newLayer));
@@ -130,14 +265,19 @@ NeuralNetwork::NeuralNetwork(const NeuralNetworkTopology& topology)
 //MARK:forward
 void NeuralNetwork::forward(const std::vector<float>& inputs, std::vector<float>& outputs)
 {
-  if (inputs.size() != this->_topology.getRawValues().at(0)) {
+  if (inputs.size() != this->_topology.getRawValues().at(0).numNeurons) {
     throw std::invalid_argument("invalid input length");
   }
 
   std::vector<float> currentInputs = inputs; // TODO: hard copy
-  for (auto& currLayer : this->_layers) {
+  for (std::size_t ii = 0; ii < this->_layers.size(); ++ii) {
+    auto& currLayer = this->_layers.at(ii);
+
+    const auto activationType = this->_topology.getRawValues().at(ii + 1).activation;
+    const auto& currActivations = AllActivations::fromEnum(activationType);
+
     std::vector<float> currentOutputs; // TODO: inefficient
-    for (auto& currNeuron : currLayer.neurons) {
+    for (auto& currNeuron : currLayer.inputNeurons) {
 
       // since a bias neuron value is always "1" -> directly use the weight
       float sum = currNeuron.getBiasSynapseWeight();
@@ -148,7 +288,15 @@ void NeuralNetwork::forward(const std::vector<float>& inputs, std::vector<float>
       }
 
       // apply the squashing/activation function
-      const float outputValue = _vanillaSigmoid(sum);
+
+      // const float outputValue = AllActivations::sigmoid::activate(sum);
+      // const float outputValue = AllActivations::ReLU::activate(sum);
+      // const float outputValue = AllActivations::leakyReLU::activate(sum);
+      const float outputValue = currActivations.activate(sum);
+
+      // const float outputValue = _restrictedRELU(sum);
+      // const float outputValue = _restrictedleakyReLU(sum);
+
       currNeuron.setLastOutput(outputValue);
       currentOutputs.push_back(outputValue);
     }

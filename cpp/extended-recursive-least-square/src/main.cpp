@@ -10,7 +10,7 @@
 #include <cstdio> // <= EXIT_SUCCESS
 #include <cmath> // <= std::round
 
-void _runTest(const std::vector<TrainingSample>& inDataset, const NeuralNetworkTopology& inTopology)
+bool _runTest(const std::vector<TrainingSample>& inDataset, const NeuralNetworkTopology& inTopology)
 {
 
   // NeuralNetworkTopology topology = NeuralNetworkTopology({2, 4, 1});
@@ -107,13 +107,31 @@ void _runTest(const std::vector<TrainingSample>& inDataset, const NeuralNetworkT
     std::cout << sstr.str() << std::endl;
   }
 
+  return (epochs < maxEpochs);
 }
 
 int main()
 {
   std::cout << "[START]" << std::endl;
 
+  uint32_t totalTests = 0;
+  uint32_t totalPass = 0;
+
+  auto topologyA = NeuralNetworkTopologyBuilder()
+    .addInputLayer(1)
+    .addHiddenLayer(4, NeuralNetworkActivations::sigmoid)
+    .addOutputLayer(1, NeuralNetworkActivations::sigmoid)
+    .build();
+
+  auto topologyB = NeuralNetworkTopologyBuilder()
+    .addInputLayer(2)
+    .addHiddenLayer(4, NeuralNetworkActivations::sigmoid)
+    .addOutputLayer(1, NeuralNetworkActivations::sigmoid)
+    .build();
+
   {
+    totalTests += 1;
+    std::cout << std::endl;
     std::cout << " ===========================================" << std::endl;
     std::cout << " == YES ==" << std::endl;
     std::cout << " ==" << std::endl;
@@ -121,10 +139,16 @@ int main()
     tmpDataset.reserve(2);
     tmpDataset.push_back({ {0}, {0} });
     tmpDataset.push_back({ {1}, {1} });
-    _runTest(tmpDataset, NeuralNetworkTopology({1, 4, 1}));
+
+    bool success = _runTest(tmpDataset, topologyA);
+    if (success) {
+      totalPass += 1;
+    }
   }
 
   {
+    totalTests += 1;
+    std::cout << std::endl;
     std::cout << " ===========================================" << std::endl;
     std::cout << " == NO ==" << std::endl;
     std::cout << " ==" << std::endl;
@@ -132,10 +156,15 @@ int main()
     tmpDataset.reserve(2);
     tmpDataset.push_back({ {0}, {1} });
     tmpDataset.push_back({ {1}, {0} });
-    _runTest(tmpDataset, NeuralNetworkTopology({1, 4, 1}));
+    bool success = _runTest(tmpDataset, topologyA);
+    if (success) {
+      totalPass += 1;
+    }
   }
 
   {
+    totalTests += 1;
+    std::cout << std::endl;
     std::cout << " ===========================================" << std::endl;
     std::cout << " == AND ==" << std::endl;
     std::cout << " ==" << std::endl;
@@ -145,10 +174,15 @@ int main()
     tmpDataset.push_back({ {1,0}, {0} });
     tmpDataset.push_back({ {0,1}, {0} });
     tmpDataset.push_back({ {1,1}, {1} });
-    _runTest(tmpDataset, NeuralNetworkTopology({2, 4, 1}));
+    bool success = _runTest(tmpDataset, topologyB);
+    if (success) {
+      totalPass += 1;
+    }
   }
 
   {
+    totalTests += 1;
+    std::cout << std::endl;
     std::cout << " ===========================================" << std::endl;
     std::cout << " == OR ==" << std::endl;
     std::cout << " ==" << std::endl;
@@ -158,10 +192,15 @@ int main()
     tmpDataset.push_back({ {1,0}, {1} });
     tmpDataset.push_back({ {0,1}, {1} });
     tmpDataset.push_back({ {1,1}, {1} });
-    _runTest(tmpDataset, NeuralNetworkTopology({2, 4, 1}));
+    bool success = _runTest(tmpDataset, topologyB);
+    if (success) {
+      totalPass += 1;
+    }
   }
 
   {
+    totalTests += 1;
+    std::cout << std::endl;
     std::cout << " ===========================================" << std::endl;
     std::cout << " == NOR ==" << std::endl;
     std::cout << " ==" << std::endl;
@@ -171,10 +210,15 @@ int main()
     tmpDataset.push_back({ {1,0}, {0} });
     tmpDataset.push_back({ {0,1}, {0} });
     tmpDataset.push_back({ {1,1}, {0} });
-    _runTest(tmpDataset, NeuralNetworkTopology({2, 4, 1}));
+    bool success = _runTest(tmpDataset, topologyB);
+    if (success) {
+      totalPass += 1;
+    }
   }
 
   {
+    totalTests += 1;
+    std::cout << std::endl;
     std::cout << " ===========================================" << std::endl;
     std::cout << " == XOR ==" << std::endl;
     std::cout << " ==" << std::endl;
@@ -184,10 +228,15 @@ int main()
     tmpDataset.push_back({ {1,0}, {1} });
     tmpDataset.push_back({ {0,1}, {1} });
     tmpDataset.push_back({ {1,1}, {0} });
-    _runTest(tmpDataset, NeuralNetworkTopology({2, 4, 1}));
+    bool success = _runTest(tmpDataset, topologyB);
+    if (success) {
+      totalPass += 1;
+    }
   }
 
   {
+    totalTests += 1;
+    std::cout << std::endl;
     std::cout << " ===========================================" << std::endl;
     std::cout << " == XNOR ==" << std::endl;
     std::cout << " ==" << std::endl;
@@ -197,8 +246,18 @@ int main()
     tmpDataset.push_back({ {1,0}, {0} });
     tmpDataset.push_back({ {0,1}, {0} });
     tmpDataset.push_back({ {1,1}, {1} });
-    _runTest(tmpDataset, NeuralNetworkTopology({2, 4, 1}));
+    bool success = _runTest(tmpDataset, topologyB);
+    if (success) {
+      totalPass += 1;
+    }
   }
+
+
+  std::cout << std::endl;
+  std::cout << "    *-------------------------" << std::endl;
+  std::cout << "    | totalPass: " << totalPass << " / " << totalTests << std::endl;
+  std::cout << "    *-----------" << std::endl;
+  std::cout << std::endl;
 
   std::cout << "[END]" << std::endl;
   return EXIT_SUCCESS;
