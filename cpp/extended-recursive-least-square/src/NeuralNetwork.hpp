@@ -10,6 +10,7 @@
 //MARK:enum
 enum class NeuralNetworkActivations : std::size_t {
   sigmoid = 0,
+  linear,
   ReLU,
   leakyReLU,
 };
@@ -22,23 +23,34 @@ namespace AllActivations {
 namespace sigmoid {
   float activate(float x);
   float derive(float x);
+  float initWeight();
+};
+
+namespace linear {
+  float activate(float x);
+  float derive(float x);
+  float initWeight();
 };
 
 namespace ReLU {
   float activate(float x);
   float derive(float x);
+  float initWeight();
 };
 
 namespace leakyReLU {
   float activate(float x);
   float derive(float x);
+  float initWeight();
 };
 
 using ActivationFuncPtr = float(*)(float x);
+using InitWeightFuncPtr = float(*)();
 
 struct ActivationType {
   ActivationFuncPtr activate;
   ActivationFuncPtr derive;
+  InitWeightFuncPtr initWeight;
 };
 
 const ActivationType& fromEnum(NeuralNetworkActivations type);
@@ -114,7 +126,7 @@ private:
 class NeuralNetworkNeuron {
 
 public:
-  NeuralNetworkNeuron(std::size_t numInputs);
+  NeuralNetworkNeuron(std::size_t numInputs, NeuralNetworkActivations activationType);
 
 public:
   // void setInputSynapseWeights(std::size_t ii, float value) const { this->_inputSynapseWeights.at(ii) = value; }

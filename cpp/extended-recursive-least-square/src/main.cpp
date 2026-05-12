@@ -2,7 +2,7 @@
 #include "NeuralNetwork.hpp"
 #include "ExtenderRecursiveLeastSquareTrainer.hpp"
 
-#include "Clock.hpp"
+#include "utils/Clock.hpp"
 
 #include <sstream>
 #include <iostream>
@@ -23,7 +23,7 @@ bool _runTest(const std::vector<TrainingSample>& inDataset, const NeuralNetworkT
 
   ExtenderRecursiveLeastSquareTrainer trainer = ExtenderRecursiveLeastSquareTrainer(def);
 
-  Clock tmpClock;
+  utils::Clock tmpClock;
   tmpClock.start();
 
   constexpr int32_t maxEpochs = 1000;
@@ -117,16 +117,21 @@ int main()
   uint32_t totalTests = 0;
   uint32_t totalPass = 0;
 
+  // NeuralNetworkActivations currActivation = NeuralNetworkActivations::sigmoid;
+  // NeuralNetworkActivations currActivation = NeuralNetworkActivations::linear;
+  // NeuralNetworkActivations currActivation = NeuralNetworkActivations::ReLU;
+  NeuralNetworkActivations currActivation = NeuralNetworkActivations::leakyReLU;
+
   auto topologyA = NeuralNetworkTopologyBuilder()
     .addInputLayer(1)
-    .addHiddenLayer(4, NeuralNetworkActivations::sigmoid)
-    .addOutputLayer(1, NeuralNetworkActivations::sigmoid)
+    .addHiddenLayer(4, currActivation)
+    .addOutputLayer(1, currActivation)
     .build();
 
   auto topologyB = NeuralNetworkTopologyBuilder()
     .addInputLayer(2)
-    .addHiddenLayer(4, NeuralNetworkActivations::sigmoid)
-    .addOutputLayer(1, NeuralNetworkActivations::sigmoid)
+    .addHiddenLayer(4, currActivation)
+    .addOutputLayer(1, currActivation)
     .build();
 
   {

@@ -96,7 +96,7 @@ float ExtenderRecursiveLeastSquareTrainer::trainSample(const TrainingSample& inS
       const auto& nextLayerDeltas = allLayersDeltas.at(layerIndex + 1).neuronsDeltas;
       const auto& nextLayerOutputs = allNeuronsOutputs.at(layerIndex + 1);
 
-      auto hiddenActivationType = this->_def.network->getTopology().getRawValues().back().activation;
+      auto hiddenActivationType = this->_def.network->getTopology().getRawValues().at(layerIndex + 1).activation;
       const auto& currActivations = AllActivations::fromEnum(hiddenActivationType);
 
       // delta[layerIndex][inputNeuronIndex] = sigmoid'(y_n) * sum_j( w[layerIndex+1][j][inputNeuronIndex] * delta[layerIndex+1][j] )

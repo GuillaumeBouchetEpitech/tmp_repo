@@ -3,6 +3,8 @@
 
 #include <chrono>
 
+namespace utils {
+
 class Clock {
 public:
   Clock() = default;
@@ -17,4 +19,6 @@ private:
   std::chrono::high_resolution_clock::time_point _start;
   std::chrono::high_resolution_clock::time_point _stop;
   int32_t _duration = -1;
+};
+
 };

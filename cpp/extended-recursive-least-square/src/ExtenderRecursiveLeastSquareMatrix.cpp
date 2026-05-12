@@ -1,7 +1,7 @@
 
 #include "ExtenderRecursiveLeastSquareMatrix.hpp"
 
-#include "clamp.hpp"
+#include "utils/clamp.hpp"
 
 #include <stdexcept>
 #include <cassert>
@@ -141,7 +141,7 @@ void ExtenderRecursiveLeastSquareMatrix::updateMatrix(
     float* Prow = P + ii * n;
     for (std::size_t jj = 0; jj < n; ++jj) {
       Prow[jj] = (Prow[jj] - ki * u[jj]) * invLambda;
-      Prow[jj] = clamp(Prow[jj], -k_matrixCellValueRange, k_matrixCellValueRange);
+      Prow[jj] = utils::clamp(Prow[jj], -k_matrixCellValueRange, k_matrixCellValueRange);
     }
   }
 }

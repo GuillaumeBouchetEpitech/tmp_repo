@@ -2,50 +2,51 @@
 #include "NeuralNetwork.hpp"
 
 #include "RandomNumberGenerator.hpp"
-#include "clamp.hpp"
-#include "asValue.hpp"
+#include "utils/clamp.hpp"
+#include "utils/asValue.hpp"
 
 #include <stdexcept>
 #include <cmath>
 
 namespace {
 
-// /**
-//  * it's a steeper sigmoid
-//  * => input:  [-x..x]
-//  * => output: [0..1]
-//  *
-//  * Notes:
-//  * => use "desmos.com" to visualise the curve
-//  * => link: https://www.desmos.com/calculator
-//  */
+// // /**
+// //  * it's a steeper sigmoid
+// //  * => input:  [-x..x]
+// //  * => output: [0..1]
+// //  *
+// //  * Notes:
+// //  * => use "desmos.com" to visualise the curve
+// //  * => link: https://www.desmos.com/calculator
+// //  */
+// // float
+// // _steeperSigmoid(float x) {
+// //   return 1.0f / (1.0f + std::exp(-4.9f * x));
+// // }
+
+
 // float
-// _steeperSigmoid(float x) {
-//   return 1.0f / (1.0f + std::exp(-4.9f * x));
+// _vanillaSigmoid(float x) {
+//   return 1.0f / (1.0f + std::exp(-x));
 // }
 
+// float
+// _restrictedRELU(float x) {
+//   return utils::clamp(x, 0.0f, 1.0f);
+// }
 
-float
-_vanillaSigmoid(float x) {
-  return 1.0f / (1.0f + std::exp(-x));
-}
+// float
+// _restrictedleakyReLU(float x) {
+//   float output = x;
+//   if (output < 0.0f) {
+//     output *= 0.1f;
+//   }
+//   return utils::clamp(output, -10.0f, 10.0f);
+// }
 
-float
-_restrictedRELU(float x) {
-  return clamp(x, 0.0f, 1.0f);
-}
-
-float
-_restrictedleakyReLU(float x) {
-  float output = x;
-  if (output < 0.0f) {
-    output *= 0.1f;
-  }
-  return clamp(output, -10.0f, 10.0f);
-}
-
-// constexpr float k_weightRange = 1000.0f;
-constexpr float k_weightRange = 100.0f;
+constexpr float k_weightRange = 1000.0f;
+// constexpr float k_weightRange = 100.0f;
+// constexpr float k_weightRange = 10.0f;
 
 };
 
@@ -54,40 +55,90 @@ namespace AllActivations {
 
   namespace sigmoid {
     float activate(float x) {
-    return 1.0f / (1.0f + std::exp(-x));
+      // [0..1]
+      return 1.0f / (1.0f + std::exp(-x));
     }
     float derive(float x) {
       return x * (1.0f - x);
+    }
+    float initWeight()
+    {
+      // const float rawValue = RandomNumberGenerator::getRangedValue(0.05f, 0.10f);
+      // // const float rawValue = RandomNumberGenerator::getRangedValue(0.5f, 0.9f);
+      // const bool isNegative = RandomNumberGenerator::getRangedValue(0.0f, 1.0f) < 0.5f;
+      // // const float newValue = rawValue * (isNegative ? -1.0f : 1.0f);
+      // return rawValue * (isNegative ? -1.0f : 1.0f);
+      return RandomNumberGenerator::getRangedValue(-0.2f, 0.2f);
+    }
+  };
+
+  namespace linear {
+    float activate(float x) {
+      // return x;
+      return utils::clamp(x, -3.0f, 3.0f);
+    }
+    float derive(float x) {
+      return 1.0f;
+    }
+    float initWeight()
+    {
+      const float rawValue = RandomNumberGenerator::getRangedValue(0.50f, 0.99f);
+      const bool isNegative = RandomNumberGenerator::getRangedValue(0.0f, 1.0f) < 0.5f;
+      return rawValue * (isNegative ? -1.0f : 1.0f);
     }
   };
 
   namespace ReLU {
     float activate(float x) {
+      // [0..x]
       return std::max(x, 0.0f);
+      // return utils::clamp(x, 0.0f, 3.0f);
     }
     float derive(float x) {
       return (x < 0.0f) ? 0.0f : 1.0f;
+    }
+    float initWeight()
+    {
+      // const float rawValue = RandomNumberGenerator::getRangedValue(0.01f, 0.05f);
+      // const bool isNegative = RandomNumberGenerator::getRangedValue(0.0f, 1.0f) < 0.5f;
+      // return rawValue * (isNegative ? -1.0f : 1.0f);
+      // // return rawValue;
+      return RandomNumberGenerator::getRangedValue(-0.2f, 0.2f);
+      // return 0.0f;
     }
   };
 
   namespace leakyReLU {
     float activate(float x) {
+      // [-0.1*x..x]
       return (x < 0.0f) ? 0.1f * x : x;
+      // return utils::clamp((x < 0.0f) ? 0.1f * x : x, -3.0f, 3.0f);
     }
     float derive(float x) {
       return (x < 0.0f) ? 0.1f : 1.0f;
     }
+    float initWeight()
+    {
+      const float rawValue = RandomNumberGenerator::getRangedValue(0.05f, 0.10f);
+      // const float rawValue = RandomNumberGenerator::getRangedValue(0.5f, 0.9f);
+      const bool isNegative = RandomNumberGenerator::getRangedValue(-1.0f, 1.0f) < 0.0f;
+      // const float newValue = rawValue * (isNegative ? -1.0f : 1.0f);
+      return rawValue * (isNegative ? -1.0f : 1.0f);
+      // this->_inputSynapseWeights.push_back(newValue);
+      // this->_inputSynapseWeights.push_back(RandomNumberGenerator::getRangedValue(0.5f, 0.9f));
+    }
   };
 
-  static std::array<ActivationType, 3> s_asArray = {{
-    { &sigmoid::activate, &sigmoid::derive },
-    { &ReLU::activate, &ReLU::derive },
-    { &leakyReLU::activate, &leakyReLU::derive }
+  static std::array<ActivationType, 4> s_asArray = {{
+    { &sigmoid::activate, &sigmoid::derive, &sigmoid::initWeight },
+    { &linear::activate, &linear::derive, &linear::initWeight },
+    { &ReLU::activate, &ReLU::derive, &ReLU::initWeight },
+    { &leakyReLU::activate, &leakyReLU::derive, &leakyReLU::initWeight }
   }};
 
   const ActivationType& fromEnum(NeuralNetworkActivations type)
   {
-    return s_asArray.at(asValue(type));
+    return s_asArray.at(utils::asValue(type));
   }
 
 };
@@ -211,26 +262,50 @@ NeuralNetworkTopology NeuralNetworkTopologyBuilder::build()
 
 
 //MARK:NeuralNetworkNeuron
-NeuralNetworkNeuron::NeuralNetworkNeuron(std::size_t numInputs)
+NeuralNetworkNeuron::NeuralNetworkNeuron(std::size_t numInputs, NeuralNetworkActivations activationType)
 {
   this->_inputSynapseWeights.reserve(numInputs);
   for (std::size_t ii = 0; ii < numInputs; ++ii) {
-    this->_inputSynapseWeights.push_back(RandomNumberGenerator::getRangedValue(-0.5f, 0.5f));
+
+    // // this->_inputSynapseWeights.push_back(RandomNumberGenerator::getRangedValue(-0.5f, 0.5f));
+
+    // // ensure non-zero inital weight value
+
+    // // const float rawValue = RandomNumberGenerator::getRangedValue(0.05f, 0.10f);
+    // const float rawValue = RandomNumberGenerator::getRangedValue(0.5f, 0.9f);
+    // const bool isNegative = RandomNumberGenerator::getRangedValue(-1.0f, 1.0f) < 0.0f;
+    // const float newValue = rawValue * (isNegative ? -1.0f : 1.0f);
+    // this->_inputSynapseWeights.push_back(newValue);
+    // // this->_inputSynapseWeights.push_back(RandomNumberGenerator::getRangedValue(0.5f, 0.9f));
+    // this->_inputSynapseWeights.push_back(newValue);
+
+    this->_inputSynapseWeights.push_back(AllActivations::fromEnum(activationType).initWeight());
   }
 
-  this->_biasSynapseWeight = RandomNumberGenerator::getRangedValue(-0.5f, 0.5f);
+  // // this->_biasSynapseWeight = RandomNumberGenerator::getRangedValue(-0.5f, 0.5f);
+
+  // // ensure non-zero inital weight value
+
+  // // const float rawValue = RandomNumberGenerator::getRangedValue(0.05f, 0.10f);
+  // const float rawValue = RandomNumberGenerator::getRangedValue(0.5f, 0.9f);
+  // const bool isNegative = RandomNumberGenerator::getRangedValue(-1.0f, 1.0f) < 0.0f;
+  // const float newValue = rawValue * (isNegative ? -1.0f : 1.0f);
+  // this->_biasSynapseWeight = newValue;
+  // // this->_biasSynapseWeight = RandomNumberGenerator::getRangedValue(0.5f, 0.9f);
+
+  this->_biasSynapseWeight = AllActivations::fromEnum(activationType).initWeight();
 }
 
 void NeuralNetworkNeuron::updateInputSynapseWeights(std::size_t ii, float value) const
 {
   this->_inputSynapseWeights.at(ii) += value;
-  this->_inputSynapseWeights.at(ii) = clamp(this->_inputSynapseWeights.at(ii), -k_weightRange, k_weightRange);
+  this->_inputSynapseWeights.at(ii) = utils::clamp(this->_inputSynapseWeights.at(ii), -k_weightRange, k_weightRange);
 }
 
 void NeuralNetworkNeuron::updateBiasSynapseWeight(float value) const
 {
   this->_biasSynapseWeight += value;
-  this->_biasSynapseWeight = clamp(this->_biasSynapseWeight, -k_weightRange, k_weightRange);
+  this->_biasSynapseWeight = utils::clamp(this->_biasSynapseWeight, -k_weightRange, k_weightRange);
 }
 
 
@@ -244,11 +319,12 @@ NeuralNetwork::NeuralNetwork(const NeuralNetworkTopology& topology)
   for (std::size_t layerIndex = 1; layerIndex < topology.getRawValues().size(); ++layerIndex) {
     const uint32_t numInputs = this->_topology.getRawValues().at(layerIndex - 1).numNeurons;
     const uint32_t numNeurons = this->_topology.getRawValues().at(layerIndex).numNeurons;
+    const auto activationType = this->_topology.getRawValues().at(layerIndex).activation;
 
     NeuralNetworkLayer newLayer;
     newLayer.inputNeurons.reserve(numNeurons);
     for (uint32_t neuronIndex = 0; neuronIndex < numNeurons; ++neuronIndex) {
-      newLayer.inputNeurons.emplace_back(numInputs);
+      newLayer.inputNeurons.emplace_back(numInputs, activationType);
     }
 
     this->_layers.push_back(std::move(newLayer));

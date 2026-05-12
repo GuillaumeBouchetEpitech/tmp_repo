@@ -24,6 +24,8 @@ D_ALIAS_FUNCTION(_asNanoSeconds, std::chrono::duration_cast<std::chrono::nanosec
 //
 //
 
+namespace utils {
+
 void Clock::start() { _start = _getTime(); }
 
 void Clock::stop() {
@@ -36,3 +38,5 @@ void Clock::stop() {
 }
 
 int32_t Clock::getDuration() const { return _duration; }
+
+};
