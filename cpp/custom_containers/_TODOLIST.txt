@@ -1,0 +1,40 @@
+
+
+  - static_array
+
+    + std::sort
+    + const iterator
+    + reverse iterator
+    + reverse const iterator
+
+    - std::swap
+    - std::move
+
+  - dynamic_heap_array
+
+    + allocation
+    + push_back
+    + emplace_back
+
+    - std::swap
+    - std::move
+
+    - std::sort
+    - const iterator
+    - reverse iterator
+    - reverse const iterator
+
+  + weak_ref_data_pool
+
+    + allocation
+    + push_back
+    + emplace_back
+
+    + weak_ref std::swap
+    + weak_ref std::move
+    + remove_unreferenced_items
+    + find_if
+    + for_each
+
+    + safe class
+
