@@ -15,37 +15,50 @@ private:
   InternalType _static_data[_Size];
 
 public:
+  // default ctor
   static_array() {
     this->_size = _Size;
     this->_data = this->_static_data;
   }
 
-  static_array(const static_array& other) {
-    this->_data = other._data;
-  }
+  virtual ~static_array() = default;
 
-  static_array& operator=(const static_array& other) {
-    if (&other == this) {
-      return *this;
-    }
-    this->_data = other._data;
-    return *this;
-  }
+  // block copy
+  static_array(const static_array& other) = delete;
+  static_array& operator=(const static_array& other) = delete;
 
+  // block move
   static_array(static_array&& other) = delete;
   static_array& operator=(static_array&& other) = delete;
 
-  // static_array(static_array&& other) : base_class(other) {
-  //   std::swap(_static_data, other._static_data); // copy (-_-)
+  // // copy ctor
+  // static_array(const static_array& other) {
+  //   this->_data = other._data;
   // }
 
+  // // copy operator=
+  // static_array& operator=(const static_array& other) {
+  //   if (&other == this) {
+  //     return *this;
+  //   }
+  //   this->_data = other._data;
+  //   return *this;
+  // }
+
+  // // move ctor
+  // static_array(static_array&& other) : base_class(other) {
+  //   std::swap(this->_static_data, other._static_data); // copy (-_-)
+  //   this->_data = this->_static_data;
+  //   other._data = other._static_data;
+  // }
+
+  // // move operator=
   // static_array& operator=(static_array&& other) {
   //   base_class::operator=(std::move(other));
   //   std::swap(_static_data, other._static_data); // copy (-_-)
   //   return *this;
   // }
 
-  virtual ~static_array() = default;
 };
 
 } // namespace custom_containers

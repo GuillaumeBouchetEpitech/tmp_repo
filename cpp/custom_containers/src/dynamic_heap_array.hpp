@@ -73,25 +73,30 @@ public:
     }
   }
 
+  virtual ~dynamic_heap_array() {
+    clear();
+    deallocate_memory(this->_data, _capacity);
+  }
+
   // disable copy
   dynamic_heap_array(const dynamic_heap_array& other) = delete;
   dynamic_heap_array& operator=(const dynamic_heap_array& other) = delete;
   // disable copy
 
-  dynamic_heap_array(dynamic_heap_array&& other) : base_class(std::move(other)) {
-    std::swap(_capacity, other._capacity);
-  }
+  // disable move
+  dynamic_heap_array(dynamic_heap_array&& other) = delete;
+  dynamic_heap_array& operator=(dynamic_heap_array&& other) = delete;
+  // disable move
 
-  dynamic_heap_array& operator=(dynamic_heap_array&& other) {
-    base_class::operator=(std::move(other));
-    std::swap(_capacity, other._capacity);
-    return *this;
-  }
+  // dynamic_heap_array(dynamic_heap_array&& other) : base_class(std::move(other)) {
+  //   std::swap(_capacity, other._capacity);
+  // }
 
-  virtual ~dynamic_heap_array() {
-    clear();
-    deallocate_memory(this->_data, _capacity);
-  }
+  // dynamic_heap_array& operator=(dynamic_heap_array&& other) {
+  //   base_class::operator=(std::move(other));
+  //   std::swap(_capacity, other._capacity);
+  //   return *this;
+  // }
 
 public:
   // may reallocate
