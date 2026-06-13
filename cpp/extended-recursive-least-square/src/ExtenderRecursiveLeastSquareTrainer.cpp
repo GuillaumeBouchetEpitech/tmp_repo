@@ -12,7 +12,7 @@ ExtenderRecursiveLeastSquareTrainer::ExtenderRecursiveLeastSquareTrainer(const E
   if (this->_def.lambda < 0.0f || this->_def.lambda > 1.0f) {
     throw std::invalid_argument("lambda value cannot be outside the range [0..1]");
   }
-  if (this->_def.windowSize < 10U) {
+  if (this->_def.windowSize < 1U) {
     throw std::invalid_argument("windowSize value cannot be bellow 10");
   }
 

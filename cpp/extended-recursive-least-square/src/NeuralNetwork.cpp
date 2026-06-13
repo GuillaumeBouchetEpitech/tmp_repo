@@ -111,8 +111,8 @@ namespace AllActivations {
   namespace leakyReLU {
     float activate(float x) {
       // [-0.1*x..x]
-      return (x < 0.0f) ? 0.1f * x : x;
-      // return utils::clamp((x < 0.0f) ? 0.1f * x : x, -3.0f, 3.0f);
+      // return (x < 0.0f) ? 0.1f * x : x;
+      return utils::clamp((x < 0.0f) ? 0.1f * x : x, -3.0f, 3.0f);
     }
     float derive(float x) {
       return (x < 0.0f) ? 0.1f : 1.0f;
