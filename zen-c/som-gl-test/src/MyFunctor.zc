@@ -1,0 +1,22 @@
+
+struct MyFunctor<T> {
+  context: T*;
+  callback: fn*(void*) -> void;
+}
+
+impl MyFunctor<T> {
+  fn new(context: T*, callback: fn*(T*) -> void) -> Self {
+    // return Functor<T>{ context: context, callback: callback };
+
+    let rawCall: fn*(void*) -> void = NULL;
+    raw {
+      rawCall = (void (*)(void*))callback;
+    }
+
+    return MyFunctor<T>{ context: context, callback: rawCall };
+  }
+
+  fn invoke(self) -> void {
+    (*self.callback)(self.context);
+  }
+}

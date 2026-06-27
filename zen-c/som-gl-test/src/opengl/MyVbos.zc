@@ -1,0 +1,49 @@
+
+import "MyGL.zc"
+
+import "std/option.zc"
+// import "std/map.zc"
+import "std/vec.zc"
+
+struct MyVbos {
+  _handles: Vec<uint>;
+};
+
+
+// MARK: setup
+impl MyVbos {
+
+  @unused
+  fn create(total: uint) -> MyVbos {
+
+    if (total == 0) {
+      panic("vbos 'total' cannot be 0.");
+    }
+
+    let handles = Vec<uint>::with_capacity(total);
+    handles.len = handles.cap; // ...cheating a bit here
+
+    glGenBuffers(total, handles.get_ref(0));
+
+    return MyVbos{ _handles: handles };
+  }
+
+  fn destroy(self) -> void {
+    glDeleteBuffers(self._handles.len, self._handles.get_ref(0));
+    self._handles.clear();
+  }
+
+  fn bind(self, array_mode: GLenum, index: uint) -> void {
+    glBindBuffer(array_mode, self._handles.get(index));
+  }
+
+  fn unbind(array_mode: GLenum) -> void {
+    glBindBuffer(array_mode, 0);
+  }
+
+  // must be bound first
+  fn bufferData(array_mode: GLenum, size: c_int, vertices: const void*, mode: GLenum) -> void {
+    glBufferData(array_mode, size, vertices, mode);
+  }
+
+}

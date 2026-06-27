@@ -1,0 +1,192 @@
+
+import "myGlfw.zc"
+
+import "std/option.zc"
+
+// import "MyFunctor.zc"
+
+#ifdef __EMSCRIPTEN__
+#include <emscripten.h>
+#endif
+
+struct MyWindow {
+  _window: GLFWwindow*;
+  _width: int;
+  _height: int;
+  _onUpdate: fn*() -> void;
+  _onCleanup: fn*() -> void;
+  _onResize: fn*(int, int) -> void;
+};
+
+
+#ifdef __EMSCRIPTEN__
+
+fn _webStep(arg: void*) {
+
+  let tmpSelf = (MyWindow*)arg;
+
+  (*tmpSelf._onUpdate)();
+}
+
+#endif
+
+
+
+raw {
+
+  void _resizeCallback(GLFWwindow* window, int width, int height) {
+    MyWindow* self = (MyWindow*)glfwGetWindowUserPointer(window);
+
+    self->_width = width;
+    self->_height = height;
+
+    if (self && self->_onResize) {
+      self->_onResize(width, height);
+    }
+  }
+
+  typedef void (*ResizeCallback)(int, int);
+
+  void MyWindow__setOnResize(MyWindow* self, ResizeCallback onCallback) {
+    self->_onResize = onCallback;
+  }
+};
+
+
+
+
+impl MyWindow {
+  fn create(width: int, height: int, title: string) -> Option<MyWindow*> {
+
+    if (!glfwInit())
+    {
+      // Initialization failed
+      println "glfwInit failed"
+      return Option<MyWindow*>::None();
+    }
+
+    // println "glfwGetVersionString(): {glfwGetVersionString()}"
+
+    glfwWindowHint(GLFW_CONTEXT_VERSION_MAJOR, 3);
+    glfwWindowHint(GLFW_CONTEXT_VERSION_MINOR, 3);
+    glfwWindowHint(GLFW_OPENGL_PROFILE, GLFW_OPENGL_CORE_PROFILE);
+
+    let window = glfwCreateWindow(width, height, title, NULL, NULL);
+    if (!window)
+    {
+      println "glfwCreateWindow failed"
+      return Option<MyWindow*>::None();
+    }
+
+    // glfwSetWindowAttrib(window, GLFW_RESIZABLE, GLFW_FALSE);
+    glfwSetWindowAttrib(window, GLFW_RESIZABLE, GLFW_TRUE);
+
+    glfwMakeContextCurrent(window);
+
+    let newMyWindow: MyWindow* = malloc(sizeof(MyWindow));
+    newMyWindow._window = window;
+    newMyWindow._width = width;
+    newMyWindow._height = height;
+    // let newMyWindow = MyWindow{ _window: window, _width: width, _height: height };
+    newMyWindow._onUpdate = NULL;
+    newMyWindow._onCleanup = NULL;
+    newMyWindow._onResize = NULL;
+
+    glfwSetWindowUserPointer(newMyWindow._window, (void*)newMyWindow);
+    glfwSetWindowSizeCallback(newMyWindow._window, &_resizeCallback);
+
+    return Option<MyWindow*>::Some(newMyWindow);
+  }
+
+  @unused
+  fn isValid(self) -> bool {
+    return self._window != NULL;
+  }
+
+  @noreturn
+  fn run(
+    self,
+    // ctx: void*,
+    onUpdate: fn*() -> void,
+    onCleanup: fn*() -> void
+  ) -> void {
+
+    // self._ctx = ctx;
+    self._onUpdate = onUpdate;
+    self._onCleanup = onCleanup;
+
+#ifndef __EMSCRIPTEN__
+
+    while (!self.isClosed()) {
+
+      // (*self._onUpdate)(self._ctx);
+      (*self._onUpdate)();
+
+      // Swap front and back buffers.
+      glfwSwapBuffers(self._window);
+      // Poll for and process events.
+      glfwPollEvents();
+    }
+
+    self.dispose();
+
+#else
+
+    raw {
+      emscripten_set_main_loop_arg(&_webStep, (void*)self, 0, true);
+    }
+
+#endif
+
+  }
+
+  @unused
+  fn isClosed(self) -> bool {
+    return glfwWindowShouldClose(self._window);
+  }
+
+  fn dispose(self) -> void {
+
+    // (*self._onCleanup)(self._ctx);
+    (*self._onCleanup)();
+
+    // Set OpenGL context to NULL.
+    glfwMakeContextCurrent(NULL);
+    // Destroy window.
+    glfwDestroyWindow(self._window);
+    // Terminate GLFW.
+    glfwTerminate();
+  }
+
+}
+
+//
+// Handle "resize" event
+//
+
+// // TODO: this is does not seems to work
+// alias ResizeCallback = fn*(int, int) -> void;
+
+// // TODO: this is does not seems to work
+// impl MyWindow {
+//   setOnResize(self, onResize: fn*(GLFWwindow*, int, int) -> void) -> void {
+//     glfwSetFramebufferSizeCallback(self._window, onResize);
+//   }
+// }
+
+// TODO: this works
+// TODO: this is a "hack" until Zen-C can support function parameters with function pointer with ore than one arguments
+
+
+// fn _resizeCallback(window: GLFWwindow*, width: int, height: int) -> void
+// {
+//   let myWindow = (MyWindow*)glfwGetWindowUserPointer(window);
+
+//   (*myWindow._onResize)(width, height);
+// }
+
+// impl MyWindow {
+//   setOnResize(self, callback: fn*(int, int) -> void) -> void {
+
+//   }
+// }

@@ -1,0 +1,19 @@
+
+import "opengl/MyGL.zc"
+
+include <GLFW/glfw3.h>
+
+extern typedef struct GLFWwindow {};
+extern typedef struct GLFWmonitor {};
+extern fn glfwInit() -> c_int;
+extern fn glfwWindowHint(key: c_int, value: c_int) -> void;
+extern fn glfwCreateWindow(width: c_int, height: c_int, title: const c_char*, monitor: GLFWmonitor*, share: GLFWwindow*) -> GLFWwindow*;
+extern fn glfwMakeContextCurrent(window: GLFWwindow*) -> void;
+extern fn glfwWindowShouldClose(window: GLFWwindow*) -> c_int;
+extern fn glfwSwapBuffers(window: GLFWwindow*) -> void;
+extern fn glfwPollEvents() -> void;
+extern fn glfwDestroyWindow(window: GLFWwindow*) -> void;
+extern fn glfwTerminate() -> void;
+extern fn glfwSetWindowUserPointer(window: GLFWwindow*, pointer: void*) -> void;
+extern fn glfwGetWindowUserPointer(window: GLFWwindow*) -> void*;
+

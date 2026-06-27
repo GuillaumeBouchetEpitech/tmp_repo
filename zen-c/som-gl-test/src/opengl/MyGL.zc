@@ -1,0 +1,78 @@
+
+#include <GL/gl.h>
+
+alias GLenum = u32;
+alias GLchar = char;
+alias GLint = i32;
+alias GLuint = u32;
+alias GLbitfield = u32;
+alias GLsizei = i32;
+alias GLfloat = float;
+alias GLvoid = void;
+extern const int GL_COLOR_BUFFER_BIT;
+extern const int GL_DEPTH_BUFFER_BIT;
+extern const int GL_TRIANGLES;
+extern const int GL_UNSIGNED_INT;
+
+// global
+extern fn glClearColor(r: GLfloat, g: GLfloat, b: GLfloat, a: GLfloat) -> void;
+extern fn glClear(mask: GLbitfield) -> void;
+extern fn glViewport(x: c_int, y: c_int, width: c_int, height: c_int) -> void;
+extern fn glEnable(enumVal: GLenum) -> void;
+
+// shader
+extern fn glCreateShader(shaderType: GLenum) -> GLuint;
+extern fn glDeleteShader(shader: GLuint) -> void;
+extern fn glShaderSource(shader: GLuint, total: GLsizei, source: GLchar**, length: const GLint*) -> void;
+extern fn glCompileShader(shader: GLuint) -> void;
+extern fn glGetShaderiv(shader: GLuint, mode: GLenum, result: GLenum*) -> void;
+extern fn glGetShaderInfoLog(shader: GLuint, size: GLsizei, length: GLsizei*, buffer: GLchar*) -> void;
+
+// program
+extern fn glCreateProgram() -> GLuint;
+extern fn glDeleteProgram(program: GLuint) -> void;
+extern fn glUseProgram(program: GLuint) -> void;
+extern fn glLinkProgram(program: GLuint) -> void;
+extern fn glGetProgramiv(program: GLuint, mode: GLenum, result: GLenum*) -> void;
+extern fn glGetProgramInfoLog(program: GLuint, size: GLsizei, length: GLsizei*, buffer: GLchar*) -> void;
+extern fn glAttachShader(program: GLuint, shader: GLuint) -> void;
+extern fn glDetachShader(program: GLuint, shader: GLuint) -> void;
+
+// shader at runtime
+extern fn glGetAttribLocation(program: GLuint, name: const c_char*) -> GLint;
+extern fn glGetUniformLocation(program: GLuint, name: const c_char*) -> GLint;
+extern fn glUniform1i(location: c_uint, value: c_int) -> void;
+extern fn glUniform2i(location: c_uint, valueA: c_int, valueB: c_int) -> void;
+extern fn glUniform3i(location: c_uint, valueA: c_int, valueB: c_int, valueC: c_int) -> void;
+extern fn glUniform4i(location: c_uint, valueA: c_int, valueB: c_int, valueC: c_int, valueD: c_int) -> void;
+extern fn glUniform1f(location: c_uint, value: float) -> void;
+extern fn glUniform2f(location: c_uint, valueA: float, valueB: float) -> void;
+extern fn glUniform3f(location: c_uint, valueA: float, valueB: float, valueC: float) -> void;
+extern fn glUniform4f(location: c_uint, valueA: float, valueB: float, valueC: float, valueD: float) -> void;
+extern fn glUniformMatrix3fv(location: c_uint, count: c_int, transpose: c_int, value: const float*);
+extern fn glUniformMatrix4fv(location: c_uint, count: c_int, transpose: c_int, value: const float*);
+
+// VAO
+extern fn glGenVertexArrays(total: GLsizei, vao: c_uint*) -> void;
+extern fn glDeleteVertexArrays(total: GLsizei, vao: c_uint*) -> void;
+extern fn glBindVertexArray(vao: c_uint) -> void;
+
+// VBO
+extern fn glGenBuffers(total: GLsizei, vbo: c_uint*) -> void;
+extern fn glDeleteBuffers(total: GLsizei, vbo: c_uint*) -> void;
+extern fn glBindBuffer(array_mode: GLenum, vbo: c_uint) -> void;
+extern fn glBufferData(array_mode: GLenum, size: c_int, vertices: const void*, mode: GLenum) -> void;
+extern fn glVertexAttribPointer(location: c_uint, numElements: c_uint, elemType: GLenum, copy: GLenum, size: GLsizei, buffer: void*) -> void;
+extern fn glEnableVertexAttribArray(location: c_uint) -> void;
+extern fn glDisableVertexAttribArray(location: GLint) -> void;
+extern fn glDrawElements(primitive: GLenum, numElements: GLsizei, program: GLenum, buffer: const void*) -> void;
+
+// Texture
+extern fn glGenTextures(total: GLsizei, tex: GLuint*) -> void;
+extern fn glDeleteTextures(total: GLsizei, tex: const GLuint*) -> void;
+extern fn glActiveTexture(mode: GLenum) -> void;
+extern fn glBindTexture(mode: GLenum, tex: c_uint) -> void;
+extern fn glTexImage2D(mode: GLenum, level: GLint, internalFormat: GLint, width: c_int, height: c_int, border: GLint, format: GLenum, texType: GLenum, data: const GLvoid*) -> void; -> void;
+extern fn glTexParameteri(texMode: GLenum, key: GLenum, value: GLint) -> void;
+extern fn glGenerateMipmap(texMode: GLenum) -> void;
+

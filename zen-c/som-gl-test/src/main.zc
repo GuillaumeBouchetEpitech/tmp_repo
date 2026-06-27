@@ -1,0 +1,236 @@
+
+
+
+
+
+import "./opengl/MyGL.zc"
+import "./opengl/MyShader.zc"
+import "./opengl/MyGeometry.zc"
+
+import "./sdl2/MySDL2Window.zc"
+
+// import "cglm/cglm.h"
+import "cglm/types.h"
+import "cglm/vec3.h"
+import "cglm/mat4.h"
+import "cglm/cam.h"
+
+// import "MyFunctor.zc"
+
+
+
+struct MyCtx {
+  window: MySDL2Window*;
+  myShader: MyShader;
+
+  myGeometry: MyGeometry;
+
+  tex: uint;
+
+  elapsedTimeMs: u32;
+};
+static let g_myCtx = MyCtx{};
+
+
+struct MyVertex
+{
+  pos: float[3];
+  texcoord: float[2];
+};
+
+
+fn _onEvent(event: SDL_Event*) -> void {
+  match (event.type) {
+    SDL_KEYDOWN => {
+      println "key down -> {event.key.keysym.sym}"
+    },
+    SDL_KEYUP => {
+      println "key up ---> {event.key.keysym.sym}"
+    }
+  }
+}
+
+fn _myUpdate(deltaMs: u32) -> void {
+
+  g_myCtx.elapsedTimeMs += deltaMs;
+
+  glViewport(0, 0, g_myCtx.window._width, g_myCtx.window._height);
+
+  // Clear color buffer and depth buffer.
+  glClearColor(0.3f, 0.3f, 0.3f, 1.0f);
+  glClear(GL_COLOR_BUFFER_BIT|GL_DEPTH_BUFFER_BIT);
+
+
+  g_myCtx.myGeometry._vaos.bind(0);
+
+
+  // Switch to the shader program.
+  g_myCtx.myShader.bind();
+
+  {
+    let projMat: f32[4][4];
+    let viewMat: f32[4][4];
+    let composedMat: f32[4][4];
+    glm_mat4_identity(projMat);
+    glm_mat4_identity(viewMat);
+    glm_mat4_identity(composedMat);
+
+    let aspectRatio: f32 = (f32)(g_myCtx.window._width) / (f32)(g_myCtx.window._height);
+    glm_perspective(70.0f, aspectRatio, 1.0f, 100.0f, projMat);
+
+
+    let angle: f32 = (f32)(g_myCtx.elapsedTimeMs) / 1000.0f;
+
+
+    let eye: f32[3] = [Math::cos(angle) * 3,Math::sin(angle) * 3,3];
+    let target: f32[3] = [0,0,0];
+    let axisUp: f32[3] = [0,0,1];
+    glm_lookat(eye, target, axisUp, viewMat);
+
+    glm_mat4_mul(projMat, viewMat, composedMat);
+
+    g_myCtx.myShader.setUniformMat4f("u_composedMatrix", (f32*)composedMat);
+  }
+
+  {
+    glActiveTexture(GL_TEXTURE0);
+    glBindTexture(GL_TEXTURE_2D, g_myCtx.tex);
+    g_myCtx.myShader.setUniform1i("u_tex", 0);
+  }
+
+  // Draw triangle(s).
+  glDrawElements(GL_TRIANGLES, 6, GL_UNSIGNED_INT, (void *)0);
+}
+
+fn _myOnResize(width: u32, height: u32) -> void {
+  // window* window = (window*)glfwGetWindowUserPointer(window);
+  // (*window->_onResize)(width, height);
+
+  println "resized -> {width} x {height}"
+}
+
+
+fn _myCleanup() -> void {
+
+  // Unbind and delete the texture.
+  glBindTexture(GL_TEXTURE_2D, 0);
+  glDeleteTextures(1, &g_myCtx.tex);
+
+  // Disable the two shader variables.
+  let attrPoint = g_myCtx.myShader.getAttributeLocation("a_position");
+  if (attrPoint.is_some()) {
+    glDisableVertexAttribArray(attrPoint.unwrap());
+  }
+  let attrTexcoord = g_myCtx.myShader.getAttributeLocation("a_texcoord");
+  if (attrTexcoord.is_some()) {
+    glDisableVertexAttribArray(attrTexcoord.unwrap());
+  }
+
+  g_myCtx.myGeometry.destroy();
+
+  g_myCtx.myShader.dispose();
+  // window.dispose();
+
+}
+
+
+fn main() -> int {
+
+  // let windowOpt = window::create(640, 480, "LOL");
+  g_myCtx.window = MySDL2Window::create("LOL", 800, 600);
+
+  // if (!windowOpt.is_some()) {
+  //   return 1;
+  // }
+  // g_myCtx.window = windowOpt.unwrap();
+
+  // MARK: Shader
+
+  let vertexSource: char* = embed "assets/shader.vert.glsl" as string;
+  let fragmentSource: char* = embed "assets/shader.frag.glsl" as string;
+
+  let myShader = MyShader::create(vertexSource, fragmentSource);
+  if (!myShader.is_some()) {
+    return 1;
+  }
+  g_myCtx.myShader = myShader.unwrap();
+
+  // MARK: vao/vbo
+
+
+  let vertices: MyVertex[4] = [
+    MyVertex{ pos: [ 0.5f,  0.5f, 0.0f], texcoord: [2.0f, 2.0f] }, // Top right
+    MyVertex{ pos: [-0.5f,  0.5f, 0.0f], texcoord: [0.0f, 2.0f] }, // Top left
+    MyVertex{ pos: [-0.5f, -0.5f, 0.0f], texcoord: [0.0f, 0.0f] }, // Bottom left
+    MyVertex{ pos: [ 0.5f, -0.5f, 0.0f], texcoord: [2.0f, 0.0f] }  // bottom right
+  ];
+
+  let indices: uint[6] = [ 0, 1, 2,  0, 3, 2 ];
+
+
+
+  let builder = MyGeometryBuilder::create();
+  builder.setShader(&g_myCtx.myShader);
+  builder.setPrimitiveType(PrimitiveType::triangles);
+  builder.addVbo(VboType::data);
+  builder.addVboAttribute(String::from("a_position"), AttrType::Vec3f, 0 * sizeof(float), false);
+  builder.addVboAttribute(String::from("a_texcoord"), AttrType::Vec2f, 3 * sizeof(float), false);
+  builder.setVboStride(5 * sizeof(f32));
+  builder.addVbo(VboType::elements);
+  // builder.setVboStride(1 * sizeof(uint));
+
+  println "builder._definition.vbos.len -> {builder._definition.vbos.len}"
+  println "builder._definition.vbos.get(0).attrs.len -> {builder._definition.vbos.get(0).attrs.len}"
+
+  g_myCtx.myGeometry = MyGeometry::create(&builder._definition, builder._shader);
+
+  g_myCtx.myGeometry.allocateBuffer(0, vertices.len * sizeof(MyVertex), vertices);
+  g_myCtx.myGeometry.allocateBuffer(1, indices.len * sizeof(uint), indices);
+
+  g_myCtx.myGeometry._vaos.bind(0);
+
+  // Enable depth testing using depth buffer.
+  glEnable(GL_DEPTH_TEST);
+
+  // Switch to the shader program.
+  g_myCtx.myShader.bind();
+
+  // MARK: texture
+
+  // Initialize texture.
+  glGenTextures(1, &g_myCtx.tex);
+  // Bind texture to first slot.
+  glActiveTexture(GL_TEXTURE0 + 0);
+  glBindTexture(GL_TEXTURE_2D, g_myCtx.tex);
+  // Set uniform texture in shader object to first texture.
+  g_myCtx.myShader.setUniform1i("u_tex", 0);
+
+  let pixels: u8[4][4] = [
+    [255,   0,   0, 255],
+    [  0, 255,   0, 255],
+    [  0,   0, 255, 255],
+    [255, 255, 255, 255]
+  ];
+
+  // Load pixel data into texture.
+  glTexImage2D(GL_TEXTURE_2D, 0, GL_RGBA8, 2, 2, 0, GL_RGBA, GL_UNSIGNED_BYTE, pixels);
+  // Set texture wrapping mode and interpolation modes.
+  glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_S, GL_REPEAT);
+  glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_NEAREST);
+  glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_NEAREST);
+  // Initialize multi-resolution layers.
+  glGenerateMipmap(GL_TEXTURE_2D);
+
+  // g_myCtx.window.setOnResize(_myOnResize);
+
+  g_myCtx.elapsedTimeMs = 0;
+
+  g_myCtx.window.run(
+    _onEvent,
+    _myUpdate,
+    _myOnResize,
+    _myCleanup
+  );
+
+  return 0;
+}

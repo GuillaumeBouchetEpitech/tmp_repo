@@ -1,0 +1,232 @@
+
+
+import "MySDL2.zc"
+
+import "std/math.zc" // <- min/max
+
+#ifdef __EMSCRIPTEN__
+#include <emscripten.h>
+#endif
+
+
+struct MySDL2Window {
+  _window: SDL_Window*;
+  _glContextId: SDL_GLContext;
+  _width: i32;
+  _height: i32;
+  _running: bool;
+  _startTime: u32;
+  _onEvent: fn*(SDL_Event*) -> void;
+  _onUpdate: fn*(u32) -> void;
+  _onResize: fn*(u32, u32) -> void;
+  _onCleanup: fn*() -> void;
+};
+
+
+
+#ifdef __EMSCRIPTEN__
+
+fn _webStep(arg: void*) {
+  let tmpSelf = (MySDL2Window*)arg;
+
+  let startFrameTime: u32 = SDL_GetTicks(); // in millisecond
+  let deltaMs: u32 = startFrameTime - tmpSelf._startTime;
+
+  // (*tmpSelf._onUpdate)(deltaMs);
+  // (*tmpSelf._singleUpdate)(deltaMs);
+  MySDL2Window::_singleUpdate(tmpSelf, deltaMs);
+
+  tmpSelf._startTime = startFrameTime;
+}
+
+#endif
+
+
+
+impl MySDL2Window {
+  fn create(title: string, width: i32, height: i32) -> MySDL2Window {
+
+    if (SDL_Init(SDL_INIT_VIDEO) < 0)
+      panic("Could not initialize SDL, error: {SDL_GetError()}");
+
+    SDL_GL_SetAttribute(SDL_GL_CONTEXT_PROFILE_MASK, SDL_GL_CONTEXT_PROFILE_ES);
+    SDL_GL_SetAttribute(SDL_GL_CONTEXT_MAJOR_VERSION, 3); // <- WebGL2
+    SDL_GL_SetAttribute(SDL_GL_CONTEXT_MINOR_VERSION, 0);
+    SDL_GL_SetAttribute(SDL_GL_DEPTH_SIZE, 16);
+    // SDL_GL_SetAttribute(SDL_GL_DEPTH_SIZE, 24);
+    SDL_GL_SetAttribute(SDL_GL_DOUBLEBUFFER, 1);
+
+    let posX: i32 = SDL_WINDOWPOS_UNDEFINED;
+    let posY: i32 = SDL_WINDOWPOS_UNDEFINED;
+    let flags: u32 = SDL_WINDOW_OPENGL;
+    // if enableResize:
+      flags |= SDL_WINDOW_RESIZABLE;
+    // if (isFullscreen)
+    //   flags |= SDL_WINDOW_FULLSCREEN;
+
+    let _window = SDL_CreateWindow(title, posX, posY, width, height, flags);
+    if (!_window) {
+      eprintln "Could not create the window, error: {SDL_GetError()}";
+      SDL_Quit();
+    }
+
+    let _glContextId = SDL_GL_CreateContext(_window);
+    if (!_glContextId) {
+      eprintln "Failed to create GL context: {SDL_GetError()}";
+      SDL_DestroyWindow(_window);
+      SDL_Quit();
+    }
+
+    if (SDL_GL_MakeCurrent(_window, _glContextId) < 0) {
+      eprintln "Failed to make the GL context current: {SDL_GetError()}";
+      SDL_GL_DeleteContext(_glContextId);
+      SDL_DestroyWindow(_window);
+      SDL_Quit();
+    }
+
+    // SDL_Delay(5000);
+
+    return MySDL2Window{
+      _window: _window,
+      _glContextId: _glContextId,
+      _width: width,
+      _height: height,
+      _running: false,
+      _startTime: 0,
+      _onEvent: NULL,
+      _onUpdate: NULL,
+      _onResize: NULL,
+      _onCleanup: NULL
+    };
+  }
+
+  fn destroy(self) -> void {
+
+    // (*self._onCleanup)(self._ctx);
+    if (self._onCleanup) {
+      (*self._onCleanup)();
+    }
+
+    if (self._glContextId) SDL_GL_DeleteContext(self._glContextId);
+    if (self._window) SDL_DestroyWindow(self._window);
+    SDL_Quit();
+  }
+
+
+  @noreturn
+  fn run(
+    self,
+    // ctx: void*,
+    onEvent: fn*(SDL_Event*) -> void,
+    onUpdate: fn*(u32) -> void,
+    onResize: fn*(u32, u32) -> void,
+    onCleanup: fn*() -> void
+  ) -> void {
+
+    // self._ctx = ctx;
+    self._onEvent = onEvent;
+    self._onUpdate = onUpdate;
+    self._onResize = onResize;
+    self._onCleanup = onCleanup;
+
+    self._startTime = SDL_GetTicks();
+
+
+#ifndef __EMSCRIPTEN__
+
+    let framesPerSecond: i32 = 60;
+    let frameDelay: i32 = 1000 / framesPerSecond;
+
+    self._running = true;
+
+    while (self._running) {
+
+      let startFrameTime: u32 = SDL_GetTicks(); // in millisecond
+      let deltaMs: u32 = startFrameTime - self._startTime;
+
+      self._singleUpdate(deltaMs);
+
+      SDL_GL_SwapWindow(self._window);
+
+      self._startTime = startFrameTime;
+
+      let stopFrameTime: u32 = SDL_GetTicks(); // in millisecond
+      let elapsedFrameTime: u32 = stopFrameTime - startFrameTime;
+      let mustWait: i32 = frameDelay - (i32)elapsedFrameTime;
+
+      if (mustWait > 0)
+        SDL_Delay((u32)mustWait);
+    }
+
+    self.destroy();
+
+#else
+
+    raw {
+      emscripten_set_main_loop_arg(&_webStep, (void*)self, 0, true);
+    }
+
+#endif
+
+  }
+
+  fn _singleUpdate(self, deltaMs: u32) -> void {
+
+    let event: SDL_Event;
+    while (SDL_PollEvent(&event)) {
+
+#ifndef __EMSCRIPTEN__
+
+      match (event.type) {
+        SDL_QUIT => {
+          return self.stop();
+        },
+        SDL_KEYUP => {
+          let symbol: i32 = event.key.keysym.sym;
+          if (symbol == SDLK_ESCAPE)
+            return self.stop();
+        }
+      }
+
+#endif
+
+      match (event.type) {
+        SDL_WINDOWEVENT => {
+
+          match (event.window.event) {
+            SDL_WINDOWEVENT_SIZE_CHANGED => {
+              if (self._onResize) {
+                let width: u32 = (u32)Math::max(event.window.data1, 1);
+                let height: u32 = (u32)Math::max(event.window.data2, 1);
+                self._onResize(width, height);
+              }
+            } //,
+            // SDL_WINDOWEVENT_SHOWN => {
+            //   self._onVisibilityChange(_visible = true);
+            // },
+            // SDL_WINDOWEVENT_HIDDEN => {
+            //   self._onVisibilityChange(_visible = false);
+            // }
+          }
+
+        }
+
+      }
+
+      if (self._onEvent) {
+        self._onEvent(&event);
+      }
+    }
+
+    //
+    //
+    //
+
+    self._onUpdate(deltaMs);
+  }
+
+  fn stop(self) -> void {
+    self._running = false;
+  }
+
+}

@@ -1,0 +1,251 @@
+
+import "MyGL.zc"
+
+import "std/option.zc"
+import "std/map.zc"
+
+struct MyShader {
+  _program: uint;
+  _vertexShader: uint;
+  _fragmentShader: uint;
+  _attributesMap: Map<GLint>;
+  _uniformsMap: Map<GLint>;
+};
+
+// MARK: setup
+impl MyShader {
+
+  @unused
+  fn create(vertexSource: c_char*, fragmentSource: c_char*) -> Option<MyShader> {
+    // Compile and check vertex shader.
+    let vertexShader: const uint = glCreateShader(GL_VERTEX_SHADER);
+    glShaderSource(vertexShader, 1, &vertexSource, NULL);
+    glCompileShader(vertexShader);
+    if (MyShader::_handleCompileError("Vertex shader", vertexShader)) {
+      // return MyShader{ program: (GLuint)0, vertexShader: (GLuint)0, fragmentShader: (GLuint)0 };
+      return Option<MyShader>::None();
+    }
+
+    // Compile and check fragment shader.
+    let fragmentShader: const uint = glCreateShader(GL_FRAGMENT_SHADER);
+    glShaderSource(fragmentShader, 1, &fragmentSource, NULL);
+    glCompileShader(fragmentShader);
+    if (MyShader::_handleCompileError("Fragment shader", fragmentShader)) {
+      // return MyShader{ program: (GLuint)0, vertexShader: (GLuint)0, fragmentShader: (GLuint)0 };
+      return Option<MyShader>::None();
+    }
+
+    // Link and check shader program.
+    let program: const uint = glCreateProgram();
+    glAttachShader(program, vertexShader);
+    glAttachShader(program, fragmentShader);
+    glLinkProgram(program);
+    if (MyShader::_handleLinkError("Shader program", program)) {
+      // return MyShader{ program: (GLuint)0, vertexShader: (GLuint)0, fragmentShader: (GLuint)0 };
+      return Option<MyShader>::None();
+    }
+
+    // return MyShader{ program: program, vertexShader: vertexShader, fragmentShader: fragmentShader };
+
+    return Option<MyShader>::Some(MyShader{
+      _program: program,
+      _vertexShader: vertexShader,
+      _fragmentShader: fragmentShader,
+      _attributesMap: Map<GLint>::new(),
+      _uniformsMap: Map<GLint>::new()
+    });
+  }
+
+  // Function to handle shader compile errors
+  @unused
+  fn _handleCompileError(step: const string, shader: const uint) -> int
+  {
+    let result: GLenum = GL_FALSE;
+    glGetShaderiv(shader, GL_COMPILE_STATUS, &result);
+    if (result == GL_FALSE)
+    {
+      let buffer: char[1024] = [];
+      glGetShaderInfoLog(shader, 1024, NULL, buffer);
+      if (buffer[0])
+      {
+        eprintln "{step}: {buffer}\n"
+      }
+      return 1;
+    }
+    return 0;
+  }
+
+  // Function to handle shader program link errors
+  @unused
+  fn _handleLinkError(step: const string, program: const uint) -> int
+  {
+    let result: GLenum = GL_FALSE;
+    glGetProgramiv(program, GL_LINK_STATUS, &result);
+    if (result == GL_FALSE)
+    {
+      let buffer: char[1024] = [];
+      glGetProgramInfoLog(program, 1024, NULL, buffer);
+      if (buffer[0])
+      {
+        eprintln "{step}: {buffer}\n"
+      }
+      return 1;
+    }
+    return 0;
+  }
+
+  fn dispose(self) -> void {
+    // Unlink and delete the shader program.
+    glDetachShader(self._program, self._vertexShader);
+    glDetachShader(self._program, self._fragmentShader);
+    glDeleteProgram(self._program);
+    glDeleteShader(self._vertexShader);
+    glDeleteShader(self._fragmentShader);
+  }
+
+  @unused
+  fn isValid(self) -> bool {
+    return self._program != 0;
+  }
+
+  fn bind(self) -> void {
+    glUseProgram(self._program);
+  }
+
+}
+
+// MARK: attributes
+impl MyShader {
+
+  fn addAttribute(self, name: string) -> Option<GLint> {
+    return self.getAttributeLocation(name);
+  }
+
+  @unused
+  fn getAttributeLocation(self, name: string) -> Option<GLint> {
+
+    let locationOpt = self._attributesMap.get(name);
+    if (locationOpt.is_some()) {
+      return Option<GLint>::Some(locationOpt.unwrap());
+    }
+
+    let newLocation = glGetAttribLocation(self._program, name)
+    if (newLocation == -1) {
+      eprintln "attribute not found -> {name}";
+      return Option<GLint>::None();
+    }
+
+    self._attributesMap.put(name, newLocation);
+    return Option<GLint>::Some(newLocation);
+  }
+
+};
+
+// MARK: uniforms
+impl MyShader {
+
+  fn addUniform(self, name: string) -> Option<GLint> {
+    return self.getUniformLocation(name);
+  }
+
+  @unused
+  fn getUniformLocation(self, name: string) -> Option<GLint> {
+
+    let locationOpt = self._uniformsMap.get(name);
+    if (locationOpt.is_some()) {
+      return Option<GLint>::Some(locationOpt.unwrap());
+    }
+
+    let newLocation = glGetUniformLocation(self._program, name)
+    if (newLocation == -1) {
+      eprintln "uniform not found -> {name}";
+      return Option<GLint>::None();
+    }
+
+    self._uniformsMap.put(name, newLocation);
+    return Option<GLint>::Some(newLocation);
+  }
+
+  fn setUniform1i(self, name: string, x: i32) -> void
+  {
+    let location = self.getUniformLocation(name);
+    if (location.is_some()) {
+      glUniform1i(location.unwrap(), x);
+    }
+  }
+
+  fn setUniform2i(self, name: string, x: i32, y: i32) -> void
+  {
+    let location = self.getUniformLocation(name);
+    if (location.is_some()) {
+      glUniform2i(location.unwrap(), x, y);
+    }
+  }
+
+  fn setUniform3i(self, name: string, x: i32, y: i32, z: i32) -> void
+  {
+    let location = self.getUniformLocation(name);
+    if (location.is_some()) {
+      glUniform3i(location.unwrap(), x, y, z);
+    }
+  }
+
+  fn setUniform4i(self, name: string, x: i32, y: i32, z: i32, w: i32) -> void
+  {
+    let location = self.getUniformLocation(name);
+    if (location.is_some()) {
+      glUniform4i(location.unwrap(), x, y, z, w);
+    }
+  }
+
+  fn setUniform1f(self, name: string, x: f32) -> void
+  {
+    let location = self.getUniformLocation(name);
+    if (location.is_some()) {
+      glUniform1f(location.unwrap(), x);
+    }
+  }
+
+  fn setUniform2f(self, name: string, x: f32, y: f32) -> void
+  {
+    let location = self.getUniformLocation(name);
+    if (location.is_some()) {
+      glUniform2f(location.unwrap(), x, y);
+    }
+  }
+
+  fn setUniform3f(self, name: string, x: f32, y: f32, z: f32) -> void
+  {
+    let location = self.getUniformLocation(name);
+    if (location.is_some()) {
+      glUniform3f(location.unwrap(), x, y, z);
+    }
+  }
+
+  fn setUniform4f(self, name: string, x: f32, y: f32, z: f32, w: f32) -> void
+  {
+    let location = self.getUniformLocation(name);
+    if (location.is_some()) {
+      glUniform4f(location.unwrap(), x, y, z, w);
+    }
+  }
+
+  fn setUniformMat3f(self, name: string, matPtr: f32*) -> void
+  {
+    let location = self.getUniformLocation(name);
+    if (location.is_some()) {
+      glUniformMatrix3fv(location.unwrap(), 1, false, matPtr);
+    }
+  }
+
+  fn setUniformMat4f(self, name: string, matPtr: f32*) -> void
+  {
+    let location = self.getUniformLocation(name);
+    if (location.is_some()) {
+      glUniformMatrix4fv(location.unwrap(), 1, false, matPtr);
+    }
+  }
+
+};
+
+

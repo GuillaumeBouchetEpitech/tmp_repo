@@ -1,0 +1,44 @@
+
+import "MyGL.zc"
+
+import "std/option.zc"
+// import "std/map.zc"
+import "std/vec.zc"
+
+struct MyVaos {
+  _handles: Vec<uint>;
+};
+
+
+// MARK: setup
+impl MyVaos {
+
+  @unused
+  fn create(total: uint) -> MyVaos {
+
+    if (total == 0) {
+      panic("vaos 'total' cannot be 0.");
+    }
+
+    let handles = Vec<uint>::with_capacity(total);
+    handles.len = handles.cap; // ...cheating a bit here
+
+    glGenVertexArrays(total, handles.get_ref(0));
+
+    return MyVaos{ _handles: handles };
+  }
+
+  fn destroy(self) -> void {
+    glDeleteVertexArrays(self._handles.len, self._handles.get_ref(0));
+    self._handles.clear();
+  }
+
+  fn bind(self, index: uint) -> void {
+    glBindVertexArray(self._handles.get(index));
+  }
+
+  fn unbind() -> void {
+    glBindVertexArray(0);
+  }
+
+}

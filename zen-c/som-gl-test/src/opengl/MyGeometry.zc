@@ -1,0 +1,319 @@
+
+import "MyGL.zc"
+
+import "./MyShader.zc"
+import "./MyVaos.zc"
+import "./MyVbos.zc"
+
+import "std/string.zc"
+import "std/vec.zc"
+
+enum AttrType {
+  Int8,
+  UInt8,
+  Int16,
+  UInt16,
+  Int32,
+  UInt32,
+
+  Float,
+  Vec2f,
+  Vec3f,
+  Vec4f,
+  // Mat3f,
+  // Mat4f,
+};
+
+enum PrimitiveType {
+  points,
+  lines,
+  line_strip,
+  line_loop,
+  triangles,
+  triangles_strip,
+  triangles_fan
+};
+
+struct MyGeometryDefVboAttr {
+  name: String;
+  attrType: AttrType;
+  index: int;
+  ignored: bool;
+};
+
+impl MyGeometryDefVboAttr {
+  @unused
+  fn create(inName: String, inAttrType: AttrType, inIndex: int, inIgnored: bool) -> MyGeometryDefVboAttr {
+    return MyGeometryDefVboAttr{
+      name: inName,
+      attrType: inAttrType,
+      index: inIndex,
+      ignored: inIgnored
+    };
+  }
+}
+
+enum VboType { data, elements };
+
+// MARK: MyGeometryDefVbo
+struct MyGeometryDefVbo {
+  vboType: VboType,
+  stride: int;
+  instanced: bool;
+  dynamic: bool;
+  attrs: Vec<MyGeometryDefVboAttr>;
+};
+
+impl MyGeometryDefVbo {
+  @unused
+  fn create(inVboType: VboType) -> MyGeometryDefVbo {
+    return MyGeometryDefVbo{
+      vboType: inVboType,
+      stride: 0,
+      instanced: false,
+      dynamic: false,
+      attrs: Vec<MyGeometryDefVboAttr>::new()
+    };
+  }
+}
+
+// MARK: MyGeometryDef
+struct MyGeometryDef {
+  vbos: Vec<MyGeometryDefVbo>;
+  primitiveType: PrimitiveType;
+};
+
+impl MyGeometryDef {
+  @unused
+  fn create() -> MyGeometryDef {
+    return MyGeometryDef{
+      vbos: Vec<MyGeometryDefVbo>::new(),
+      primitiveType: PrimitiveType::triangles
+    };
+  }
+}
+
+// MARK: MyGeometryBuilder
+struct MyGeometryBuilder {
+  _definition: MyGeometryDef;
+  _shader: MyShader*;
+};
+
+// MARK: setup
+impl MyGeometryBuilder {
+
+  @unused
+  fn create() -> MyGeometryBuilder {
+    return MyGeometryBuilder{
+      _definition: MyGeometryDef::create(),
+      _shader: NULL
+    };
+  }
+
+  fn setShader(self, inShader: MyShader*) -> void {
+    self._shader = inShader;
+  }
+  fn setPrimitiveType(self, inPrimitiveType: PrimitiveType) -> void {
+    self._definition.primitiveType = inPrimitiveType;
+  }
+  fn addVbo(self, inVboType: VboType) -> void {
+    self._definition.vbos.push(MyGeometryDefVbo::create(inVboType));
+  }
+  fn addVboAttribute(self, inName: String, inType: AttrType, inIndex: int, isIgnored: bool) -> void {
+    self._definition.vbos.get_ref(self._definition.vbos.len - 1).attrs.push(MyGeometryDefVboAttr::create(inName, inType, inIndex, isIgnored));
+  }
+  fn setVboStride(self, inStride: uint) -> void {
+    self._definition.vbos.get_ref(self._definition.vbos.len - 1).stride = inStride;
+  }
+
+  // fn destroy(self) -> void {
+  //   self
+  // }
+
+}
+
+// MARK: MyGeometry
+struct MyGeometry {
+  _definition: MyGeometryDef*;
+  _shader: MyShader*;
+  _vaos: MyVaos;
+  _vbos: MyVbos;
+  _primitiveStart: uint;
+  _primitiveCount: uint;
+  _instanceCount: uint;
+  _isInstanced: bool;
+};
+
+// MARK: setup
+impl MyGeometry {
+
+  @unused
+  fn create(inDefinition: MyGeometryDef*, inShader: MyShader*) -> MyGeometry {
+
+    if (inDefinition.vbos.len == 0) {
+      panic("MyGeometry 'definition.vbos.length' cannot be 0.");
+    }
+
+    let vaos = MyVaos::create(1);
+    let vbos = MyVbos::create(inDefinition.vbos.len);
+
+    inShader.bind();
+
+    vaos.bind(0);
+
+    // Set up layout of vertex buffer object.
+    for ii in 0..inDefinition.vbos.len {
+      let currVbo = inDefinition.vbos.get_ref(ii);
+
+      if (currVbo.vboType == VboType::elements) {
+        vbos.bind(GL_ELEMENT_ARRAY_BUFFER, ii);
+        continue;
+      }
+
+      vbos.bind(GL_ARRAY_BUFFER, ii);
+
+      for jj in 0..currVbo.attrs.len {
+        let currAttr = currVbo.attrs.get_ref(jj);
+
+        let attrLocOpt = inShader.getAttributeLocation(currAttr.name.c_str());
+        if (!attrLocOpt.is_some()) {
+          panic("MyGeometry 'definition.vbos.attr.name' {currAttr.name} not found.");
+        }
+        let attrLoc = attrLocOpt.unwrap();
+
+
+        let rowSize: uint = 1;
+        let nextElemType: GLenum = GL_FLOAT;
+
+        // println "======= {jj} / {currVbo.attrs.len}"
+
+        match currAttr.attrType {
+
+          //
+
+          AttrType::Int8 => {
+            nextElemType = GL_BYTE;
+            rowSize = 1;
+          },
+          AttrType::UInt8 => {
+            nextElemType = GL_UNSIGNED_BYTE;
+            rowSize = 1;
+          },
+
+          AttrType::Int16 => {
+            nextElemType = GL_SHORT;
+            rowSize = 2;
+          },
+          AttrType::UInt16 => {
+            nextElemType = GL_UNSIGNED_SHORT;
+            rowSize = 2;
+          },
+
+          AttrType::Int32 => {
+            nextElemType = GL_INT;
+            rowSize = 4;
+          },
+          AttrType::UInt32 => {
+            nextElemType = GL_UNSIGNED_INT;
+            rowSize = 4;
+          },
+
+          //
+
+          AttrType::Float => {
+            nextElemType = GL_FLOAT;
+            rowSize = 1;
+          },
+          AttrType::Vec2f => {
+            nextElemType = GL_FLOAT;
+            rowSize = 2;
+          },
+          AttrType::Vec3f => {
+            nextElemType = GL_FLOAT;
+            rowSize = 3;
+          },
+          AttrType::Vec4f => {
+            nextElemType = GL_FLOAT;
+            rowSize = 4;
+          },
+          // AttrType::Mat3f => {
+          //   nextElemType = GL_FLOAT;
+          //   rowSize = 3;
+          // }
+          // AttrType::Mat4f => {
+          //   nextElemType = GL_FLOAT;
+          //   rowSize = 4;
+          // }
+
+          //
+
+          _ => {
+            panic("MyGeometry 'definition.vbos.attr.attrType' not found.");
+          }
+
+        }
+
+        // println "     == {jj} / {currVbo.attrs.len}"
+
+        glVertexAttribPointer(attrLoc, rowSize, nextElemType, GL_FALSE, currVbo.stride, (void *)currAttr.index);
+
+        glEnableVertexAttribArray(attrLoc);
+      }
+    }
+
+    MyVaos::unbind();
+
+    return MyGeometry{
+      _definition: inDefinition,
+      _shader: inShader,
+      _vaos: vaos,
+      _vbos: vbos,
+      _primitiveStart: 0,
+      _primitiveCount: 0,
+      _instanceCount: 0,
+      _isInstanced: false
+    };
+  }
+
+
+  fn allocateBuffer(self, inIndex: uint, inDataSize: uint, inDataPtr: const void*) -> void {
+    // if (!_vao.isAllocated() || !_vbo.isAllocated())
+    //   D_THROW(std::runtime_error, "vao/vbo not allocated");
+
+    // MyGeometryDefVbo* currVbo = &inDefinition.vbos.get_ref(ii);
+
+
+
+    let vboDef = self._definition.vbos.get_ref(inIndex);
+
+    if (vboDef.vboType == VboType::data) {
+      println "is data"
+      println "self._definition.vbos.len -> {self._definition.vbos.len}"
+      println "self._vbos._handles.len -> {self._vbos._handles.len}"
+      self._vbos.bind(GL_ARRAY_BUFFER, inIndex);
+      MyVbos::bufferData(GL_ARRAY_BUFFER, inDataSize, inDataPtr, GL_STATIC_DRAW);
+      MyVbos::unbind(GL_ARRAY_BUFFER);
+    } else {
+      println "is elements"
+      println "self._definition.vbos.len -> {self._definition.vbos.len}"
+      println "self._vbos._handles.len -> {self._vbos._handles.len}"
+      self._vbos.bind(GL_ELEMENT_ARRAY_BUFFER, inIndex);
+      MyVbos::bufferData(GL_ELEMENT_ARRAY_BUFFER, inDataSize, inDataPtr, GL_STATIC_DRAW);
+      MyVbos::unbind(GL_ELEMENT_ARRAY_BUFFER);
+    }
+
+    // self._vbos.bind(vboDef., inIndex);
+    // .allocateBuffer(index, dataSize, vboDef.dynamic, data);
+  }
+
+  fn destroy(self) -> void {
+
+    MyVbos::unbind(GL_ELEMENT_ARRAY_BUFFER);
+    MyVbos::unbind(GL_ARRAY_BUFFER);
+    self._vbos.destroy();
+
+    MyVaos::unbind();
+    self._vaos.destroy();
+  }
+
+}
