@@ -1,0 +1,40 @@
+# Only overrides; everything else comes from SearXNG's defaults.
+use_default_settings: true
+
+general:
+  instance_name: "searxng-mcp"
+
+server:
+  # secret_key is taken from the SEARXNG_SECRET env var.
+  limiter: false        # bot detection would block the MCP container
+  image_proxy: false
+  public_instance: false
+
+search:
+  safe_search: 0
+  formats:
+    - html
+    - json              # required: the API returns 403 without it
+
+outgoing:
+  request_timeout: 5.0
+  max_request_timeout: 10.0
+
+# Extra general-purpose engines so results don't hinge on a single backend.
+# wikipedia/wikidata are already on by default; startpage and mojeek
+# (proof-of-work CAPTCHAs) and qwant (CAPTCHA) are skipped.
+# brave (rate-limits us) and duckduckgo (CAPTCHAs us) are turned off.
+# bing stays off (its default): its results were mostly off-topic.
+engines:
+  - name: yahoo
+    disabled: false
+  - name: yep
+    disabled: false
+  - name: yandex
+    disabled: false
+  - name: resulthunter
+    disabled: false
+  - name: brave
+    disabled: true
+  - name: duckduckgo
+    disabled: true
